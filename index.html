@@ -40,18 +40,14 @@
         </div>
       </div>
       <div class="ml-auto flex items-center gap-2">
-        <select id="person-select" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft">
-          <option value="minchae" data-i18n="minchae"></option>
-          <option value="yeonu" data-i18n="yeonu"></option>
-        </select>
+        <select id="person-select" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft"></select>
         <select id="lang-select" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft">
-          <option value="ko">한국어</option>
-          <option value="en">English</option>
+          <option value="ko">한</option>
+          <option value="en">E</option>
         </select>
-        <button id="refreshBtn" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" data-i18n="refresh"></button>
-        <button id="toggleTheme" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" data-i18n="toggleTheme" title="라이트/다크 전환">🌗</button>
-        <button id="fullscreen-button" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" data-i18n="fullScreen" title="전체 화면">⛶</button>
-        <button id="toggle-auto" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" data-i18n="autoOn" title="자동 전환"></button>
+        <button id="toggleTheme" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" title="라이트/다크 전환">🌗</button>
+        <button id="fullscreen-button" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" title="전체 화면">⛶</button>
+        <button id="toggle-auto" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" title="자동 전환">▶️</button>
       </div>
     </div>
 
@@ -125,6 +121,7 @@
 
     const REFRESH_MS = 5 * 60 * 1000;
     const PEOPLE_MAP = {};
+    const PEOPLE_IDS = ['minchae', 'yeonu'];
     let TARGET_PERSON = 'minchae';
     let CURRENT_LANG = 'ko';
     let switcherInterval = null;
@@ -138,11 +135,10 @@
       ko: {
         dashboardTitle: "의 투자 대시보드",
         lastUpdated: "최근 업데이트: —",
-        refresh: "새로고침",
         toggleTheme: "라이트/다크 전환",
         fullScreen: "전체 화면",
-        autoOn: "자동 전환: 켜기",
-        autoOff: "자동 전환: 끄기",
+        autoOn: "▶️",
+        autoOff: "⏸️",
         minchae: "민채",
         yeonu: "Yeonu",
         kpiTotalLabel: "총 평가액",
@@ -173,11 +169,10 @@
       en: {
         dashboardTitle: "'s Investment Dashboard",
         lastUpdated: "Last Updated: —",
-        refresh: "Refresh",
         toggleTheme: "Toggle Theme",
         fullScreen: "Full Screen",
-        autoOn: "Auto Switch: On",
-        autoOff: "Auto Switch: Off",
+        autoOn: "▶️",
+        autoOff: "⏸️",
         minchae: "Minchae",
         yeonu: "Yeonu",
         kpiTotalLabel: "Total Valuation",
@@ -284,8 +279,11 @@
           el.textContent = text;
         }
       });
-      // Handle the dynamic title
+      // Handle the dynamic title and button text
       renderDashboardTitle();
+      const autoButton = $('#toggle-auto');
+      autoButton.textContent = switcherInterval ? TRANSLATIONS[CURRENT_LANG].autoOff : TRANSLATIONS[CURRENT_LANG].autoOn;
+      
       // Re-render everything with new language strings
       fetchDashboardData();
     }
@@ -653,13 +651,28 @@
             clearInterval(switcherInterval);
             switcherInterval = null;
             button.textContent = TRANSLATIONS[CURRENT_LANG].autoOn;
+            localStorage.setItem('autoSwitchEnabled', 'false');
         } else {
             switcherInterval = setInterval(() => {
-                const nextPerson = TARGET_PERSON === 'minchae' ? 'yeonu' : 'minchae';
-                setPerson(nextPerson);
+                const currentIndex = PEOPLE_IDS.indexOf(TARGET_PERSON);
+                const nextIndex = (currentIndex + 1) % PEOPLE_IDS.length;
+                setPerson(PEOPLE_IDS[nextIndex]);
             }, 15000); // 15 seconds
             button.textContent = TRANSLATIONS[CURRENT_LANG].autoOff;
+            localStorage.setItem('autoSwitchEnabled', 'true');
         }
+    }
+
+    function populatePersonSelector() {
+        const selector = $('#person-select');
+        selector.innerHTML = '';
+        for (const id of PEOPLE_IDS) {
+            const option = document.createElement('option');
+            option.value = id;
+            option.textContent = id.charAt(0).toUpperCase();
+            selector.appendChild(option);
+        }
+        selector.value = TARGET_PERSON;
     }
 
     // ===================== INIT =====================
@@ -668,7 +681,6 @@
       const storedPerson = localStorage.getItem('targetPerson');
       if (storedPerson) {
         TARGET_PERSON = storedPerson;
-        $('#person-select').value = storedPerson;
       } else {
         localStorage.setItem('targetPerson', TARGET_PERSON);
       }
@@ -681,7 +693,13 @@
         localStorage.setItem('dashboardLang', CURRENT_LANG);
       }
 
-      $('#refreshBtn').addEventListener('click', fetchDashboardData);
+      const autoSwitchEnabled = localStorage.getItem('autoSwitchEnabled');
+      if (autoSwitchEnabled === 'true') {
+        toggleSwitcher();
+      }
+
+      populatePersonSelector();
+
       $('#toggleTheme').addEventListener('click', toggleTheme);
       $('#fullscreen-button').addEventListener('click', enterFullscreen);
       $('#person-select').addEventListener('change', (e) => setPerson(e.target.value));
