@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ko" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>민채의 금융 대시보드</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          boxShadow: {
+            soft: '0 10px 30px rgba(0,0,0,0.06)'
+          }
+        }
+      },
+      darkMode: 'class'
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body { font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif; }
+    .card-details { transition: max-height .3s ease, opacity .3s ease; max-height: 0; overflow: hidden; opacity: 0; }
+    .card-details.visible { max-height: 260px; opacity: 1; }
+    .skeleton { background: linear-gradient(90deg, rgba(0,0,0,0.06), rgba(0,0,0,0.12), rgba(0,0,0,0.06)); background-size: 200% 100%; animation: shimmer 1.2s infinite; }
+    @keyframes shimmer { from { background-position: 200% 0;} to { background-position: -200% 0;} }
+    @media (min-width: 1024px) { .main-container { min-height: 100vh; } }
+  </style>
+</head>
+<body class="h-full bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100">
+  <div class="main-container mx-auto max-w-7xl p-4 sm:p-6 lg:p-10">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-indigo-600 text-white grid place-items-center shadow-soft">M</div>
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold">민채의 투자 대시보드</h1>
+          <p id="last-updated" class="text-xs text-slate-500 dark:text-slate-400">최근 업데이트: —</p>
+        </div>
+      </div>
+      <div class="ml-auto flex items-center gap-2">
+        <button id="refreshBtn" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft">새로고침</button>
+        <button id="toggleTheme" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" title="라이트/다크 전환">🌗</button>
+        <button id="fullscreen-button" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" title="전체 화면">⛶</button>
+      </div>
+    </div>
+
+    <div id="status-banner" class="hidden mb-4 rounded-2xl border border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200 px-4 py-3 text-sm">데이터를 불러오는 중입니다…</div>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+      <div class="kpi bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800">
+        <div class="text-sm text-slate-500 dark:text-slate-400">총 평가액</div>
+        <div id="kpi-total" class="text-3xl font-extrabold mt-1 tracking-tight">₩0</div>
+        <div id="kpi-total-mm" class="text-xs text-slate-500 mt-1">₩0.00 MM</div>
+      </div>
+      <div class="kpi bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800">
+        <div class="text-sm text-slate-500 dark:text-slate-400">총 손익</div>
+        <div id="kpi-pl" class="text-3xl font-extrabold mt-1 tracking-tight">₩0</div>
+        <div id="kpi-pl-rate" class="text-xs mt-1">—</div>
+      </div>
+      <div class="kpi bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800">
+        <div class="text-sm text-slate-500 dark:text-slate-400">현금</div>
+        <div id="kpi-cash" class="text-3xl font-extrabold mt-1 tracking-tight">₩0</div>
+        <div class="text-xs text-slate-500 mt-1">안전 자산</div>
+      </div>
+      <div class="kpi bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800">
+        <div class="text-sm text-slate-500 dark:text-slate-400">보유 자산 수</div>
+        <div id="kpi-count" class="text-3xl font-extrabold mt-1 tracking-tight">0</div>
+        <div class="text-xs text-slate-500 mt-1">펀드 + 현금</div>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-soft border border-slate-100 dark:border-slate-800">
+        <h2 class="text-lg font-bold mb-4">자산 배분</h2>
+        <div class="h-[320px]"><canvas id="donut"></canvas></div>
+      </div>
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-soft border border-slate-100 dark:border-slate-800">
+        <h2 class="text-lg font-bold mb-4">자산별 손익</h2>
+        <div class="h-[320px]"><canvas id="bars"></canvas></div>
+      </div>
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-soft border border-slate-100 dark:border-slate-800">
+        <div class="flex items-center gap-2 mb-4">
+          <h2 class="text-lg font-bold">포트폴리오 추이</h2>
+          <span id="timeline-badge" class="ml-2 text-[10px] px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700 text-slate-500">날짜 데이터 탐지 안 됨</span>
+        </div>
+        <div class="h-[320px]"><canvas id="line"></canvas></div>
+      </div>
+    </section>
+
+    <section class="mb-10">
+      <div class="flex items-end justify-between mb-3">
+        <h2 class="text-xl font-extrabold">보유 자산</h2>
+        <div class="text-xs text-slate-500">카드를 탭하면 상세가 펼쳐집니다</div>
+      </div>
+      <div id="holdings" class="grid grid-cols-1 md:grid-cols-2 gap-5"></div>
+    </section>
+
+    <footer class="text-center text-xs text-slate-500 pb-8 opacity-80">© for Minchae · GitHub Pages & Google Sheets 연동</footer>
+  </div>
+
+  <script>
+    // ===================== CONFIG =====================
+    // Corrected URLs to point to the raw files in your GitHub repository
+    const POSITIONS_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/holdings/positions.csv";
+    const ASSETS_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/reference/assets.csv";
+    const PRICES_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/prices/prices_daily.csv";
+    const REFRESH_MS = 5 * 60 * 1000; // 5분
+    const TARGET_PERSON = 'minchae';
+
+    // Global data stores
+    let investments = [];
+    let cash = 0;
+
+    // ===================== HELPERS =====================
+    const $ = (sel) => document.querySelector(sel);
+    const SAFE_CSV_SPLIT = /,(?=(?:[^"]*"[^"]*")*[^"]*$)/;
+    const nf = new Intl.NumberFormat('ko-KR');
+    const nfc = new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const won = (n) => `₩${nf.format(Math.round(n||0))}`;
+    const toMM = (n) => `₩${nfc.format((n||0)/1_000_000)} MM`;
+
+    function showBanner(msg, tone='info') {
+      const el = $('#status-banner');
+      el.textContent = msg;
+      el.className = `mb-4 rounded-2xl border px-4 py-3 text-sm`;
+      el.classList.add('hidden'); // Clear previous tone classes
+      el.classList.toggle('border-amber-200', tone==='info');
+      el.classList.toggle('bg-amber-50', tone==='info');
+      el.classList.toggle('text-amber-800', tone==='info');
+      el.classList.toggle('border-red-200', tone==='error');
+      el.classList.toggle('bg-red-50', tone==='error');
+      el.classList.toggle('text-red-700', tone==='error');
+      el.classList.remove('hidden');
+    }
+
+    function hideBanner(){ $('#status-banner').classList.add('hidden'); }
+    function setLastUpdated(){ $('#last-updated').textContent = `최근 업데이트: ${new Date().toLocaleString('ko-KR')}`; }
+
+    function parseCSV(text) {
+        const rows = text.trim().split(/\r?\n/);
+        const headers = rows[0].split(SAFE_CSV_SPLIT).map(h => h.trim().replace(/"/g, ''));
+        const data = [];
+        for (let i = 1; i < rows.length; i++) {
+            const values = rows[i].split(SAFE_CSV_SPLIT).map(v => v.trim().replace(/"/g, ''));
+            const row = {};
+            headers.forEach((h, idx) => {
+                row[h] = values[idx];
+            });
+            data.push(row);
+        }
+        return data;
+    }
+
+    // ===================== FETCH & PARSE =====================
+    async function fetchDashboardData() {
+        showBanner('데이터를 불러오는 중입니다…', 'info');
+        try {
+            const [positionsRes, assetsRes, pricesRes] = await Promise.all([
+                fetch(POSITIONS_URL + `?t=${Date.now()}`),
+                fetch(ASSETS_URL + `?t=${Date.now()}`),
+                fetch(PRICES_URL + `?t=${Date.now()}`)
+            ]);
+            
+            if (!positionsRes.ok || !assetsRes.ok || !pricesRes.ok) {
+                throw new Error("One or more data files failed to load.");
+            }
+
+            const positionsText = await positionsRes.text();
+            const assetsText = await assetsRes.text();
+            const pricesText = await pricesRes.text();
+
+            const positionsData = parseCSV(positionsText);
+            const assetsData = parseCSV(assetsText);
+            const pricesData = parseCSV(pricesText);
+
+            // Process data for the target person
+            const personPositions = positionsData.filter(pos => pos.person_id === TARGET_PERSON);
+            
+            const assetMap = new Map();
+            assetsData.forEach(asset => {
+                assetMap.set(asset.asset_id, asset);
+            });
+
+            const pricesMap = new Map();
+            pricesData.forEach(price => {
+                pricesMap.set(price.asset_id, Number(price.close));
+            });
+
+            // Populate global investments and cash
+            investments = [];
+            let cashTotal = 0;
+            personPositions.forEach(pos => {
+                const assetRef = assetMap.get(pos.asset_id);
+                if (!assetRef) return; // Skip if no reference data
+
+                if (assetRef.type === 'cash') {
+                    cashTotal += Number(pos.qty);
+                } else {
+                    const latestPrice = pricesMap.get(pos.asset_id) || Number(assetRef.current_price);
+                    investments.push({
+                        name: assetRef.short_name,
+                        fund_cd: pos.asset_id,
+                        quantity: Number(pos.qty) * 1000, // Correct for display
+                        purchasePrice: Number(pos.cost_per_unit),
+                        currentPrice: latestPrice
+                    });
+                }
+            });
+            cash = cashTotal;
+
+            // Note: Historical data is not in your provided files, so the line chart will not render.
+            // A timeline Map is created, but it will be empty.
+            const timeline = new Map();
+            
+            renderAll(timeline);
+            setLastUpdated();
+            hideBanner();
+
+        } catch (e) {
+            console.error(e);
+            showBanner(`오류: ${e.message} — 데이터 파일을 확인하세요.`, 'error');
+        }
+    }
+
+    // ===================== RENDER =====================
+    let donutChart, barsChart, lineChart;
+
+    function renderAll(timeline){
+      renderKPIs();
+      renderHoldings();
+      renderDonut();
+      renderBars();
+      renderLine(timeline);
+    }
+
+    function calcTotals(){
+      let totalVal = cash;
+      let totalCost = cash;
+      for (const inv of investments){
+        const qty = inv.quantity / 1000;
+        totalVal += (inv.currentPrice||0) * qty;
+        totalCost += inv.purchasePrice * qty;
+      }
+      return { totalVal, totalCost, totalPL: totalVal - totalCost };
+    }
+
+    function renderKPIs(){
+      const { totalVal, totalCost, totalPL } = calcTotals();
+      $('#kpi-total').textContent = won(totalVal);
+      $('#kpi-total-mm').textContent = toMM(totalVal);
+      $('#kpi-cash').textContent = won(cash);
+      $('#kpi-count').textContent = String(investments.length + (cash > 0 ? 1 : 0));
+
+      const rate = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
+      const plEl = $('#kpi-pl');
+      plEl.textContent = `${totalPL >= 0 ? '+' : ''}${won(Math.abs(totalPL))}`;
+      const rateEl = $('#kpi-pl-rate');
+      rateEl.textContent = `수익률 ${rate >= 0 ? '+' : ''}${nfc.format(rate)}%`;
+      plEl.classList.toggle('text-emerald-600', totalPL >= 0);
+      plEl.classList.toggle('text-rose-600', totalPL < 0);
+    }
+
+    function renderHoldings(){
+      const wrap = $('#holdings');
+      wrap.innerHTML = '';
+      for (const inv of investments){
+        const qty = inv.quantity/1000;
+        const curVal = qty * (inv.currentPrice||0);
+        const cost = qty * inv.purchasePrice;
+        const pl = curVal - cost;
+        const gain = pl >= 0;
+        const card = document.createElement('div');
+        card.className = 'bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 shadow-soft hover:shadow transition-all cursor-pointer';
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h3 class="text-lg font-bold">${inv.name}</h3>
+              <div class="text-xs text-slate-500">코드: ${inv.fund_cd}</div>
+            </div>
+            <div class="text-right">
+              <div class="text-sm text-slate-500">현재 평가액</div>
+              <div class="text-xl font-extrabold">${toMM(curVal)}</div>
+            </div>
+          </div>
+          <div class="card-details mt-4 text-sm">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <div class="text-slate-500">수량</div>
+                <div class="font-semibold">${nf.format(qty)}</div>
+              </div>
+              <div>
+                <div class="text-slate-500">평단가</div>
+                <div class="font-semibold">${won(inv.purchasePrice)}</div>
+              </div>
+              <div>
+                <div class="text-slate-500">현재 기준가</div>
+                <div class="font-semibold">${inv.currentPrice ? won(inv.currentPrice) : '—'}</div>
+              </div>
+              <div>
+                <div class="text-slate-500">현재 손익</div>
+                <div class="font-semibold ${gain ? 'text-emerald-600' : 'text-rose-600'}">${gain ? '+' : ''}${toMM(Math.abs(pl))}</div>
+              </div>
+            </div>
+          </div>
+        `;
+        card.addEventListener('click', () => card.querySelector('.card-details').classList.toggle('visible'));
+        wrap.appendChild(card);
+      }
+    }
+
+    function renderDonut(){
+      const labels = [...investments.map(i => i.name), '현금'];
+      const data = [
+        ...investments.map(i => (i.quantity / 1000) * (i.currentPrice || 0)),
+        cash
+      ];
+      if (donutChart) donutChart.destroy();
+      donutChart = new Chart($('#donut').getContext('2d'), {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: ctx => `${ctx.label}: ${toMM(ctx.parsed)}` } } }
+        }
+      });
+    }
+
+    function renderBars(){
+      const labels = investments.map(i => i.name);
+      const values = investments.map(i => (i.quantity / 1000) * ((i.currentPrice || 0) - i.purchasePrice));
+      if (barsChart) barsChart.destroy();
+      barsChart = new Chart($('#bars').getContext('2d'), {
+        type: 'bar',
+        data: { labels, datasets: [{ label: '손익 (MM)', data: values }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: { y: { beginAtZero: true, ticks: { callback: v => toMM(v) } } },
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${toMM(c.parsed.y)}` } } }
+        }
+      });
+    }
+
+    function renderLine(timeline){
+      const badge = $('#timeline-badge');
+      if (!timeline || timeline.size === 0){
+        badge.textContent = '날짜 열을 찾지 못함';
+        if (lineChart) { lineChart.destroy(); lineChart = null; }
+        const ctx = $('#line').getContext('2d');
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        return;
+      }
+      badge.textContent = '날짜 데이터 감지됨';
+
+      // The logic for rendering the line chart is here, but it will not run
+      // because your current data source does not contain historical data.
+      // If you add a prices_history.csv, you would add the logic to process it here.
+    }
+
+    // ===================== INTERACTION =====================
+    function enterFullscreen(){
+      const el = document.documentElement;
+      if (el.requestFullscreen) el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      else if (el.msRequestFullscreen) el.msRequestFullscreen();
+    }
+
+    function applyStoredTheme(){
+      const stored = localStorage.getItem('theme-mode');
+      if (stored === 'dark') document.documentElement.classList.add('dark');
+    }
+
+    function toggleTheme(){
+      const html = document.documentElement;
+      html.classList.toggle('dark');
+      localStorage.setItem('theme-mode', html.classList.contains('dark') ? 'dark' : 'light');
+    }
+
+    // ===================== INIT =====================
+    window.addEventListener('load', () => {
+      applyStoredTheme();
+      $('#refreshBtn').addEventListener('click', fetchDashboardData);
+      $('#toggleTheme').addEventListener('click', toggleTheme);
+      $('#fullscreen-button').addEventListener('click', enterFullscreen);
+      fetchDashboardData();
+      setInterval(fetchDashboardData, REFRESH_MS);
+    });
+  </script>
+</body>
+</html>
