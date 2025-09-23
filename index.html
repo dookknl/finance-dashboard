@@ -35,59 +35,63 @@
       <div class="flex items-center gap-3">
         <div id="person-icon" class="w-11 h-11 rounded-2xl bg-indigo-600 text-white grid place-items-center shadow-soft"></div>
         <div>
-          <h1 id="dashboard-title" class="text-2xl sm:text-3xl font-extrabold"></h1>
-          <p id="last-updated" class="text-xs text-slate-500 dark:text-slate-400">최근 업데이트: —</p>
+          <h1 id="dashboard-title" class="text-2xl sm:text-3xl font-extrabold" data-i18n="dashboardTitle"></h1>
+          <p id="last-updated" class="text-xs text-slate-500 dark:text-slate-400" data-i18n="lastUpdated"></p>
         </div>
       </div>
       <div class="ml-auto flex items-center gap-2">
         <select id="person-select" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft">
-          <option value="minchae">민채</option>
-          <option value="yeonu">Yeonu</option>
+          <option value="minchae" data-i18n="minchae"></option>
+          <option value="yeonu" data-i18n="yeonu"></option>
         </select>
-        <button id="refreshBtn" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft">새로고침</button>
-        <button id="toggleTheme" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" title="라이트/다크 전환">🌗</button>
-        <button id="fullscreen-button" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" title="전체 화면">⛶</button>
+        <select id="lang-select" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft">
+          <option value="ko">한국어</option>
+          <option value="en">English</option>
+        </select>
+        <button id="refreshBtn" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" data-i18n="refresh"></button>
+        <button id="toggleTheme" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" data-i18n="toggleTheme" title="라이트/다크 전환">🌗</button>
+        <button id="fullscreen-button" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" data-i18n="fullScreen" title="전체 화면">⛶</button>
       </div>
     </div>
 
-    <div id="status-banner" class="hidden mb-4 rounded-2xl border border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200 px-4 py-3 text-sm">데이터를 불러오는 중입니다…</div>
+    <div id="status-banner" class="hidden mb-4 rounded-2xl border px-4 py-3 text-sm"></div>
 
     <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
       <div class="kpi bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800">
-        <div class="text-sm text-slate-500 dark:text-slate-400">총 평가액</div>
+        <div class="text-sm text-slate-500 dark:text-slate-400" data-i18n="kpiTotalLabel"></div>
         <div id="kpi-total" class="text-3xl font-extrabold mt-1 tracking-tight">₩0</div>
         <div id="kpi-total-mm" class="text-xs text-slate-500 mt-1">₩0.00 MM</div>
       </div>
       <div class="kpi bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800">
-        <div class="text-sm text-slate-500 dark:text-slate-400">총 손익</div>
+        <div class="text-sm text-slate-500 dark:text-slate-400" data-i18n="kpiProfitLossLabel"></div>
         <div id="kpi-pl" class="text-3xl font-extrabold mt-1 tracking-tight">₩0</div>
         <div id="kpi-pl-rate" class="text-xs mt-1">—</div>
       </div>
       <div class="kpi bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800">
-        <div class="text-sm text-slate-500 dark:text-slate-400">현금</div>
+        <div class="text-sm text-slate-500 dark:text-slate-400" data-i18n="kpiCashLabel"></div>
         <div id="kpi-cash" class="text-3xl font-extrabold mt-1 tracking-tight">₩0</div>
-        <div class="text-xs text-slate-500 mt-1">안전 자산</div>
+        <div class="text-xs text-slate-500 mt-1" data-i18n="kpiCashSubLabel"></div>
       </div>
       <div class="kpi bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800">
-        <div class="text-sm text-slate-500 dark:text-slate-400">보유 자산 수</div>
+        <div class="text-sm text-slate-500 dark:text-slate-400" data-i18n="kpiCountLabel"></div>
         <div id="kpi-count" class="text-3xl font-extrabold mt-1 tracking-tight">0</div>
-        <div class="text-xs text-slate-500 mt-1">펀드 + 현금</div>
+        <div class="text-xs text-slate-500 mt-1" data-i18n="kpiCountSubLabel"></div>
       </div>
     </section>
 
     <section class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
       <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-soft border border-slate-100 dark:border-slate-800">
-        <h2 class="text-lg font-bold mb-4">자산 배분</h2>
+        <h2 class="text-lg font-bold mb-4" data-i18n="assetAllocationTitle"></h2>
         <div class="h-[320px]"><canvas id="donut"></canvas></div>
       </div>
       <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-soft border border-slate-100 dark:border-slate-800">
-        <h2 class="text-lg font-bold mb-4">자산별 손익</h2>
+        <h2 class="text-lg font-bold mb-4" data-i18n="profitLossByAssetTitle"></h2>
         <div class="h-[320px]"><canvas id="bars"></canvas></div>
       </div>
       <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-soft border border-slate-100 dark:border-slate-800">
         <div class="flex items-center gap-2 mb-4">
-          <h2 class="text-lg font-bold">포트폴리오 추이</h2>
-          <span id="timeline-badge" class="ml-2 text-[10px] px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700 text-slate-500">날짜 데이터 탐지 안 됨</span>
+          <h2 class="text-lg font-bold" data-i18n="portfolioTrendTitle"></h2>
+          <span id="timeline-badge" class="ml-2 text-[10px] px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700 text-slate-500"></span>
         </div>
         <div class="h-[320px]"><canvas id="line"></canvas></div>
       </div>
@@ -95,13 +99,20 @@
 
     <section class="mb-10">
       <div class="flex items-end justify-between mb-3">
-        <h2 class="text-xl font-extrabold">보유 자산</h2>
-        <div class="text-xs text-slate-500">카드를 탭하면 상세가 펼쳐집니다</div>
+        <h2 class="text-xl font-extrabold" data-i18n="holdingsTitle"></h2>
+        <div class="text-xs text-slate-500" data-i18n="holdingsSubtitle"></div>
       </div>
       <div id="holdings" class="grid grid-cols-1 md:grid-cols-2 gap-5"></div>
     </section>
 
-    <footer class="text-center text-xs text-slate-500 pb-8 opacity-80">© for Minchae · GitHub Pages & Google Sheets 연동</footer>
+    <section id="cash-holdings-section" class="mb-10">
+        <div class="flex items-end justify-between mb-3">
+            <h2 class="text-xl font-extrabold" data-i18n="cashHoldingsTitle"></h2>
+        </div>
+        <div id="cash-holdings" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+    </section>
+
+    <footer class="text-center text-xs text-slate-500 pb-8 opacity-80" data-i18n="footer"></footer>
   </div>
 
   <script>
@@ -111,21 +122,113 @@
     const PRICES_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/prices/prices_daily.csv";
     const PEOPLE_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/reference/people.csv";
 
-    const REFRESH_MS = 5 * 60 * 1000; // 5분
+    const REFRESH_MS = 5 * 60 * 1000;
     const PEOPLE_MAP = {};
     let TARGET_PERSON = 'minchae';
+    let CURRENT_LANG = 'ko';
 
     // Global data stores
     let investments = [];
-    let cash = 0;
+    let cashByCurrency = {};
+    let currencySymbols = {};
+
+    const TRANSLATIONS = {
+      ko: {
+        dashboardTitle: "의 투자 대시보드",
+        lastUpdated: "최근 업데이트: —",
+        refresh: "새로고침",
+        toggleTheme: "라이트/다크 전환",
+        fullScreen: "전체 화면",
+        minchae: "민채",
+        yeonu: "Yeonu",
+        kpiTotalLabel: "총 평가액",
+        kpiProfitLossLabel: "총 손익",
+        kpiCashLabel: "총 현금",
+        kpiCashSubLabel: "안전 자산",
+        kpiCountLabel: "보유 자산 수",
+        kpiCountSubLabel: "펀드 + 현금",
+        assetAllocationTitle: "자산 배분",
+        profitLossByAssetTitle: "자산별 손익",
+        portfolioTrendTitle: "포트폴리오 추이",
+        holdingsTitle: "보유 자산",
+        holdingsSubtitle: "카드를 탭하면 상세가 펼쳐집니다",
+        cashHoldingsTitle: "현금 보유",
+        footer: "© for 민채 · GitHub Pages & Google Sheets 연동",
+        fetchError: "오류: 데이터 파일을 불러오지 못했습니다. — 파일을 확인하세요.",
+        fetching: "데이터를 불러오는 중입니다…",
+        price: "현재가",
+        quantity: "수량",
+        cost: "평단가",
+        currentValue: "현재 평가액",
+        profitLoss: "현재 손익",
+        rateOfReturn: "수익률",
+        fundCode: "코드",
+        noDateData: "날짜 데이터 탐지 안 됨",
+        total: "총계"
+      },
+      en: {
+        dashboardTitle: "'s Investment Dashboard",
+        lastUpdated: "Last Updated: —",
+        refresh: "Refresh",
+        toggleTheme: "Toggle Theme",
+        fullScreen: "Full Screen",
+        minchae: "Minchae",
+        yeonu: "Yeonu",
+        kpiTotalLabel: "Total Valuation",
+        kpiProfitLossLabel: "Total P/L",
+        kpiCashLabel: "Total Cash",
+        kpiCashSubLabel: "Safe Assets",
+        kpiCountLabel: "Total Holdings",
+        kpiCountSubLabel: "Funds + Cash",
+        assetAllocationTitle: "Asset Allocation",
+        profitLossByAssetTitle: "P/L by Asset",
+        portfolioTrendTitle: "Portfolio Trend",
+        holdingsTitle: "Holdings",
+        holdingsSubtitle: "Tap card for details",
+        cashHoldingsTitle: "Cash Holdings",
+        footer: "© for Minchae · GitHub Pages & Google Sheets Integration",
+        fetchError: "Error: Failed to load one or more data files. — Check your files.",
+        fetching: "Fetching data…",
+        price: "Current Price",
+        quantity: "Quantity",
+        cost: "Cost per Unit",
+        currentValue: "Current Value",
+        profitLoss: "Current P/L",
+        rateOfReturn: "Return Rate",
+        fundCode: "Code",
+        noDateData: "No Date Data Detected",
+        total: "Total"
+      }
+    };
 
     // ===================== HELPERS =====================
     const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => document.querySelectorAll(sel);
     const SAFE_CSV_SPLIT = /,(?=(?:[^"]*"[^"]*")*[^"]*$)/;
+
     const nf = new Intl.NumberFormat('ko-KR');
     const nfc = new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const won = (n) => `₩${nf.format(Math.round(n||0))}`;
-    const toMM = (n) => `₩${nfc.format((n||0)/1_000_000)} MM`;
+    
+    function formatCurrency(n, currency) {
+      if (currency) {
+        try {
+          const formatter = new Intl.NumberFormat(CURRENT_LANG, {
+            style: 'currency',
+            currency: currency
+          });
+          return formatter.format(Math.round(n || 0));
+        } catch (e) {
+          // Fallback if currency is not a standard code
+          return `${currency} ${nf.format(Math.round(n || 0))}`;
+        }
+      }
+      return `${nf.format(Math.round(n || 0))}`;
+    }
+
+    function toMM(n) {
+      const formatted = nfc.format((n || 0) / 1_000_000);
+      return `${formatted} MM`;
+    }
 
     function showBanner(msg, tone='info') {
       const el = $('#status-banner');
@@ -142,7 +245,7 @@
     }
 
     function hideBanner(){ $('#status-banner').classList.add('hidden'); }
-    function setLastUpdated(){ $('#last-updated').textContent = `최근 업데이트: ${new Date().toLocaleString('ko-KR')}`; }
+    function setLastUpdated(){ $('#last-updated').textContent = `${TRANSLATIONS[CURRENT_LANG].lastUpdated.split(':')[0]}: ${new Date().toLocaleString(CURRENT_LANG === 'ko' ? 'ko-KR' : 'en-US')}`; }
 
     function parseCSV(text) {
         const rows = text.trim().split(/\r?\n/);
@@ -159,9 +262,31 @@
         return data;
     }
 
+    function applyTranslations(lang) {
+      $$('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        let text = TRANSLATIONS[lang][key];
+        if (el.tagName === 'INPUT' || el.tagName === 'SELECT') {
+          el.options.forEach(option => {
+            if (option.value === el.value) {
+              option.textContent = text;
+            }
+          });
+        } else if (el.tagName === 'OPTION') {
+          el.textContent = text;
+        } else {
+          el.textContent = text;
+        }
+      });
+      // Handle the dynamic title
+      renderDashboardTitle();
+      // Re-render everything with new language strings
+      renderAll(new Map()); // Pass an empty map since we don't have historical data
+    }
+    
     // ===================== FETCH & PARSE =====================
     async function fetchDashboardData() {
-        showBanner('데이터를 불러오는 중입니다…', 'info');
+        showBanner(TRANSLATIONS[CURRENT_LANG].fetching, 'info');
         try {
             const [positionsRes, assetsRes, pricesRes, peopleRes] = await Promise.all([
                 fetch(POSITIONS_URL + `?t=${Date.now()}`),
@@ -171,7 +296,7 @@
             ]);
             
             if (!positionsRes.ok || !assetsRes.ok || !pricesRes.ok) {
-                throw new Error("One or more data files failed to load.");
+                throw new Error(TRANSLATIONS[CURRENT_LANG].fetchError);
             }
             if (peopleRes.ok) {
                 const peopleData = parseCSV(await peopleRes.text());
@@ -191,6 +316,9 @@
             const assetMap = new Map();
             assetsData.forEach(asset => {
                 assetMap.set(asset.asset_id, asset);
+                if (asset.type === 'cash') {
+                    currencySymbols[asset.currency] = asset.currency;
+                }
             });
 
             const pricesMap = new Map();
@@ -199,26 +327,27 @@
             });
 
             investments = [];
-            let cashTotal = 0;
+            cashByCurrency = {};
             personPositions.forEach(pos => {
                 const assetRef = assetMap.get(pos.asset_id);
                 if (!assetRef) return;
 
                 if (assetRef.type === 'cash') {
-                    cashTotal += Number(pos.qty);
+                    const currency = assetRef.currency;
+                    cashByCurrency[currency] = (cashByCurrency[currency] || 0) + Number(pos.qty);
                 } else {
                     const latestPrice = pricesMap.get(pos.asset_id) || Number(assetRef.current_price);
                     investments.push({
                         name: assetRef.short_name,
                         fund_cd: pos.asset_id,
-                        quantity: Number(pos.qty) * 1000,
+                        quantity: Number(pos.qty),
                         purchasePrice: Number(pos.cost_per_unit),
-                        currentPrice: latestPrice
+                        currentPrice: latestPrice,
+                        currency: assetRef.currency
                     });
                 }
             });
-            cash = cashTotal;
-
+            
             const timeline = new Map();
             
             renderAll(timeline);
@@ -227,7 +356,7 @@
 
         } catch (e) {
             console.error(e);
-            showBanner(`오류: ${e.message} — 데이터 파일을 확인하세요.`, 'error');
+            showBanner(e.message, 'error');
         }
     }
 
@@ -237,6 +366,7 @@
     function renderAll(timeline){
       renderDashboardTitle();
       renderKPIs();
+      renderCashHoldings();
       renderHoldings();
       renderDonut();
       renderBars();
@@ -245,44 +375,71 @@
 
     function renderDashboardTitle(){
       const personName = PEOPLE_MAP[TARGET_PERSON] || TARGET_PERSON;
-      $('#dashboard-title').textContent = `${personName}의 투자 대시보드`;
+      $('#dashboard-title').textContent = `${personName}${TRANSLATIONS[CURRENT_LANG].dashboardTitle}`;
       $('#person-icon').textContent = personName.charAt(0).toUpperCase();
     }
 
     function calcTotals(){
-      let totalVal = cash;
-      let totalCost = cash;
-      for (const inv of investments){
-        const qty = inv.quantity / 1000;
-        totalVal += (inv.currentPrice||0) * qty;
-        totalCost += inv.purchasePrice * qty;
+      let totalVal = 0;
+      let totalCost = 0;
+      let totalCash = 0;
+      for (const currency in cashByCurrency) {
+          totalCash += cashByCurrency[currency]; // We'll assume cash values are in KRW for total calculation for now
       }
-      return { totalVal, totalCost, totalPL: totalVal - totalCost };
+      totalVal += totalCash;
+      totalCost += totalCash;
+      for (const inv of investments){
+        const curVal = (inv.currentPrice||0) * inv.quantity;
+        const cost = inv.purchasePrice * inv.quantity;
+        totalVal += curVal;
+        totalCost += cost;
+      }
+      return { totalVal, totalCost, totalPL: totalVal - totalCost, totalCash: totalCash };
     }
 
     function renderKPIs(){
-      const { totalVal, totalCost, totalPL } = calcTotals();
-      $('#kpi-total').textContent = won(totalVal);
+      const { totalVal, totalCost, totalPL, totalCash } = calcTotals();
+      $('#kpi-total').textContent = formatCurrency(totalVal, 'KRW');
       $('#kpi-total-mm').textContent = toMM(totalVal);
-      $('#kpi-cash').textContent = won(cash);
-      $('#kpi-count').textContent = String(investments.length + (cash > 0 ? 1 : 0));
+      $('#kpi-cash').textContent = formatCurrency(totalCash, 'KRW');
+      $('#kpi-count').textContent = String(investments.length + Object.keys(cashByCurrency).length);
 
       const rate = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
       const plEl = $('#kpi-pl');
-      plEl.textContent = `${totalPL >= 0 ? '+' : ''}${won(Math.abs(totalPL))}`;
+      plEl.textContent = `${totalPL >= 0 ? '+' : ''}${formatCurrency(Math.abs(totalPL), 'KRW')}`;
       const rateEl = $('#kpi-pl-rate');
-      rateEl.textContent = `수익률 ${rate >= 0 ? '+' : ''}${nfc.format(rate)}%`;
+      rateEl.textContent = `${TRANSLATIONS[CURRENT_LANG].rateOfReturn} ${rate >= 0 ? '+' : ''}${nfc.format(rate)}%`;
       plEl.classList.toggle('text-emerald-600', totalPL >= 0);
       plEl.classList.toggle('text-rose-600', totalPL < 0);
+    }
+
+    function renderCashHoldings() {
+        const wrap = $('#cash-holdings');
+        wrap.innerHTML = '';
+        if (Object.keys(cashByCurrency).length === 0) {
+            $('#cash-holdings-section').style.display = 'none';
+        } else {
+            $('#cash-holdings-section').style.display = 'block';
+            for (const currency in cashByCurrency) {
+                const amount = cashByCurrency[currency];
+                const card = document.createElement('div');
+                card.className = 'bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 shadow-soft';
+                card.innerHTML = `
+                    <div class="text-sm text-slate-500 dark:text-slate-400">${TRANSLATIONS[CURRENT_LANG].kpiCashLabel} (${currency})</div>
+                    <div class="text-3xl font-extrabold mt-1 tracking-tight">${formatCurrency(amount, currency)}</div>
+                    <div class="text-xs text-slate-500 mt-1">${TRANSLATIONS[CURRENT_LANG].total}</div>
+                `;
+                wrap.appendChild(card);
+            }
+        }
     }
 
     function renderHoldings(){
       const wrap = $('#holdings');
       wrap.innerHTML = '';
       for (const inv of investments){
-        const qty = inv.quantity/1000;
-        const curVal = qty * (inv.currentPrice||0);
-        const cost = qty * inv.purchasePrice;
+        const curVal = inv.quantity * (inv.currentPrice||0);
+        const cost = inv.quantity * inv.purchasePrice;
         const pl = curVal - cost;
         const gain = pl >= 0;
         const card = document.createElement('div');
@@ -291,30 +448,30 @@
           <div class="flex items-start justify-between gap-3">
             <div>
               <h3 class="text-lg font-bold">${inv.name}</h3>
-              <div class="text-xs text-slate-500">코드: ${inv.fund_cd}</div>
+              <div class="text-xs text-slate-500" data-i18n="fundCode">${TRANSLATIONS[CURRENT_LANG].fundCode}: ${inv.fund_cd}</div>
             </div>
             <div class="text-right">
-              <div class="text-sm text-slate-500">현재 평가액</div>
-              <div class="text-xl font-extrabold">${toMM(curVal)}</div>
+              <div class="text-sm text-slate-500" data-i18n="currentValue">${TRANSLATIONS[CURRENT_LANG].currentValue}</div>
+              <div class="text-xl font-extrabold">${formatCurrency(curVal, inv.currency)}</div>
             </div>
           </div>
           <div class="card-details mt-4 text-sm">
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <div class="text-slate-500">수량</div>
-                <div class="font-semibold">${nf.format(qty)}</div>
+                <div class="text-slate-500" data-i18n="quantity">${TRANSLATIONS[CURRENT_LANG].quantity}</div>
+                <div class="font-semibold">${nf.format(inv.quantity)}</div>
               </div>
               <div>
-                <div class="text-slate-500">평단가</div>
-                <div class="font-semibold">${won(inv.purchasePrice)}</div>
+                <div class="text-slate-500" data-i18n="cost">${TRANSLATIONS[CURRENT_LANG].cost}</div>
+                <div class="font-semibold">${formatCurrency(inv.purchasePrice, inv.currency)}</div>
               </div>
               <div>
-                <div class="text-slate-500">현재 기준가</div>
-                <div class="font-semibold">${inv.currentPrice ? won(inv.currentPrice) : '—'}</div>
+                <div class="text-slate-500" data-i18n="price">${TRANSLATIONS[CURRENT_LANG].price}</div>
+                <div class="font-semibold">${inv.currentPrice ? formatCurrency(inv.currentPrice, inv.currency) : '—'}</div>
               </div>
               <div>
-                <div class="text-slate-500">현재 손익</div>
-                <div class="font-semibold ${gain ? 'text-emerald-600' : 'text-rose-600'}">${gain ? '+' : ''}${toMM(Math.abs(pl))}</div>
+                <div class="text-slate-500" data-i18n="profitLoss">${TRANSLATIONS[CURRENT_LANG].profitLoss}</div>
+                <div class="font-semibold ${gain ? 'text-emerald-600' : 'text-rose-600'}">${gain ? '+' : ''}${formatCurrency(Math.abs(pl), inv.currency)}</div>
               </div>
             </div>
           </div>
@@ -325,10 +482,11 @@
     }
 
     function renderDonut(){
-      const labels = [...investments.map(i => i.name), '현금'];
+      const cashTotal = Object.values(cashByCurrency).reduce((sum, val) => sum + val, 0);
+      const labels = [...investments.map(i => i.name), TRANSLATIONS[CURRENT_LANG].kpiCashLabel];
       const data = [
-        ...investments.map(i => (i.quantity / 1000) * (i.currentPrice || 0)),
-        cash
+        ...investments.map(i => i.quantity * (i.currentPrice || 0)),
+        cashTotal
       ];
       if (donutChart) donutChart.destroy();
       donutChart = new Chart($('#donut').getContext('2d'), {
@@ -343,11 +501,11 @@
 
     function renderBars(){
       const labels = investments.map(i => i.name);
-      const values = investments.map(i => (i.quantity / 1000) * ((i.currentPrice || 0) - i.purchasePrice));
+      const values = investments.map(i => i.quantity * ((i.currentPrice || 0) - i.purchasePrice));
       if (barsChart) barsChart.destroy();
       barsChart = new Chart($('#bars').getContext('2d'), {
         type: 'bar',
-        data: { labels, datasets: [{ label: '손익 (MM)', data: values }] },
+        data: { labels, datasets: [{ label: TRANSLATIONS[CURRENT_LANG].profitLoss + ' (MM)', data: values }] },
         options: {
           responsive: true, maintainAspectRatio: false,
           scales: { y: { beginAtZero: true, ticks: { callback: v => toMM(v) } } },
@@ -359,13 +517,12 @@
     function renderLine(timeline){
       const badge = $('#timeline-badge');
       if (!timeline || timeline.size === 0){
-        badge.textContent = '날짜 열을 찾지 못함';
+        badge.textContent = TRANSLATIONS[CURRENT_LANG].noDateData;
         if (lineChart) { lineChart.destroy(); lineChart = null; }
         const ctx = $('#line').getContext('2d');
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         return;
       }
-      badge.textContent = '날짜 데이터 감지됨';
     }
 
     // ===================== INTERACTION =====================
@@ -373,6 +530,12 @@
       TARGET_PERSON = personId;
       localStorage.setItem('targetPerson', personId);
       fetchDashboardData();
+    }
+    
+    function setLanguage(lang) {
+      CURRENT_LANG = lang;
+      localStorage.setItem('dashboardLang', lang);
+      applyTranslations(lang);
     }
 
     function enterFullscreen(){
@@ -403,12 +566,22 @@
       } else {
         localStorage.setItem('targetPerson', TARGET_PERSON);
       }
+      
+      const storedLang = localStorage.getItem('dashboardLang');
+      if (storedLang) {
+        CURRENT_LANG = storedLang;
+        $('#lang-select').value = storedLang;
+      } else {
+        localStorage.setItem('dashboardLang', CURRENT_LANG);
+      }
 
       $('#refreshBtn').addEventListener('click', fetchDashboardData);
       $('#toggleTheme').addEventListener('click', toggleTheme);
       $('#fullscreen-button').addEventListener('click', enterFullscreen);
       $('#person-select').addEventListener('change', (e) => setPerson(e.target.value));
+      $('#lang-select').addEventListener('change', (e) => setLanguage(e.target.value));
 
+      applyTranslations(CURRENT_LANG);
       fetchDashboardData();
       setInterval(fetchDashboardData, REFRESH_MS);
     });
