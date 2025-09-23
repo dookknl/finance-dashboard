@@ -51,6 +51,7 @@
         <button id="refreshBtn" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" data-i18n="refresh"></button>
         <button id="toggleTheme" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" data-i18n="toggleTheme" title="라이트/다크 전환">🌗</button>
         <button id="fullscreen-button" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" data-i18n="fullScreen" title="전체 화면">⛶</button>
+        <button id="toggle-auto" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" data-i18n="autoOn" title="자동 전환"></button>
       </div>
     </div>
 
@@ -126,6 +127,7 @@
     const PEOPLE_MAP = {};
     let TARGET_PERSON = 'minchae';
     let CURRENT_LANG = 'ko';
+    let switcherInterval = null;
 
     // Global data stores
     let investments = [];
@@ -139,6 +141,8 @@
         refresh: "새로고침",
         toggleTheme: "라이트/다크 전환",
         fullScreen: "전체 화면",
+        autoOn: "자동 전환: 켜기",
+        autoOff: "자동 전환: 끄기",
         minchae: "민채",
         yeonu: "Yeonu",
         kpiTotalLabel: "총 평가액",
@@ -172,6 +176,8 @@
         refresh: "Refresh",
         toggleTheme: "Toggle Theme",
         fullScreen: "Full Screen",
+        autoOn: "Auto Switch: On",
+        autoOff: "Auto Switch: Off",
         minchae: "Minchae",
         yeonu: "Yeonu",
         kpiTotalLabel: "Total Valuation",
@@ -613,6 +619,7 @@
     function setPerson(personId) {
       TARGET_PERSON = personId;
       localStorage.setItem('targetPerson', personId);
+      $('#person-select').value = personId; // Update the UI selector
       fetchDashboardData();
     }
     
@@ -640,6 +647,21 @@
       localStorage.setItem('theme-mode', html.classList.contains('dark') ? 'dark' : 'light');
     }
 
+    function toggleSwitcher() {
+        const button = $('#toggle-auto');
+        if (switcherInterval) {
+            clearInterval(switcherInterval);
+            switcherInterval = null;
+            button.textContent = TRANSLATIONS[CURRENT_LANG].autoOn;
+        } else {
+            switcherInterval = setInterval(() => {
+                const nextPerson = TARGET_PERSON === 'minchae' ? 'yeonu' : 'minchae';
+                setPerson(nextPerson);
+            }, 15000); // 15 seconds
+            button.textContent = TRANSLATIONS[CURRENT_LANG].autoOff;
+        }
+    }
+
     // ===================== INIT =====================
     window.addEventListener('load', () => {
       applyStoredTheme();
@@ -664,9 +686,9 @@
       $('#fullscreen-button').addEventListener('click', enterFullscreen);
       $('#person-select').addEventListener('change', (e) => setPerson(e.target.value));
       $('#lang-select').addEventListener('change', (e) => setLanguage(e.target.value));
+      $('#toggle-auto').addEventListener('click', toggleSwitcher);
 
       applyTranslations(CURRENT_LANG);
-      fetchDashboardData();
       setInterval(fetchDashboardData, REFRESH_MS);
     });
   </script>
