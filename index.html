@@ -129,7 +129,16 @@
     // Global data stores
     let investments = [];
     let cashByCurrency = {};
-    let currencySymbols = {};
+    const MM_THRESHOLD = 1000000; // 1 million
+
+    // Currency symbols map
+    const CURRENCY_SYMBOLS = {
+      'KRW': '₩',
+      'USD': '$',
+      'EUR': '€',
+      'JPY': '¥',
+      'CNY': '¥'
+    };
 
     const TRANSLATIONS = {
       ko: {
@@ -211,24 +220,22 @@
     const nfc = new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     
     function formatCurrency(n, currency) {
-      if (currency) {
-        try {
-          const formatter = new Intl.NumberFormat(CURRENT_LANG, {
-            style: 'currency',
-            currency: currency
-          });
-          return formatter.format(Math.round(n || 0));
-        } catch (e) {
-          // Fallback if currency is not a standard code
-          return `${currency} ${nf.format(Math.round(n || 0))}`;
-        }
-      }
-      return `${nf.format(Math.round(n || 0))}`;
+      const symbol = CURRENCY_SYMBOLS[currency] || currency;
+      return `${symbol}${nf.format(Math.round(n || 0))}`;
     }
 
-    function toMM(n) {
+    function toMM(n, currency) {
+      const symbol = CURRENCY_SYMBOLS[currency] || currency;
       const formatted = nfc.format((n || 0) / 1_000_000);
-      return `${formatted} MM`;
+      return `${symbol}${formatted} MM`;
+    }
+
+    function formatMMOrExact(n, currency) {
+      if (Math.abs(n) < MM_THRESHOLD) {
+        return formatCurrency(n, currency);
+      } else {
+        return toMM(n, currency);
+      }
     }
 
     function showBanner(msg, tone='info') {
@@ -320,9 +327,6 @@
             const assetMap = new Map();
             assetsData.forEach(asset => {
                 assetMap.set(asset.asset_id, asset);
-                if (asset.type === 'cash') {
-                    currencySymbols[asset.currency] = asset.currency;
-                }
             });
 
             const pricesMap = new Map();
@@ -441,14 +445,14 @@
 
     function renderKPIs(){
       const { totalVal, totalCost, totalPL, totalCash } = calcTotals();
-      $('#kpi-total').textContent = toMM(totalVal);
+      $('#kpi-total').textContent = formatMMOrExact(totalVal, 'KRW');
       $('#kpi-total-mm').textContent = formatCurrency(totalVal, 'KRW');
-      $('#kpi-cash').textContent = toMM(totalCash);
+      $('#kpi-cash').textContent = formatMMOrExact(totalCash, 'KRW');
       $('#kpi-count').textContent = String(investments.length + Object.keys(cashByCurrency).length);
 
       const rate = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
       const plEl = $('#kpi-pl');
-      plEl.textContent = `${totalPL >= 0 ? '+' : ''}${toMM(Math.abs(totalPL))}`;
+      plEl.textContent = `${totalPL >= 0 ? '+' : ''}${formatMMOrExact(Math.abs(totalPL), 'KRW')}`;
       const rateEl = $('#kpi-pl-rate');
       rateEl.textContent = `${TRANSLATIONS[CURRENT_LANG].rateOfReturn} ${rate >= 0 ? '+' : ''}${nfc.format(rate)}%`;
       plEl.classList.toggle('text-emerald-600', totalPL >= 0);
@@ -468,7 +472,7 @@
                 card.className = 'bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 shadow-soft';
                 card.innerHTML = `
                     <div class="text-sm text-slate-500 dark:text-slate-400">${TRANSLATIONS[CURRENT_LANG].kpiCashLabel} (${currency})</div>
-                    <div class="text-3xl font-extrabold mt-1 tracking-tight">${toMM(amount)}</div>
+                    <div class="text-3xl font-extrabold mt-1 tracking-tight">${formatMMOrExact(amount, currency)}</div>
                     <div class="text-xs text-slate-500 mt-1">${formatCurrency(amount, currency)}</div>
                 `;
                 wrap.appendChild(card);
@@ -494,7 +498,7 @@
             </div>
             <div class="text-right">
               <div class="text-sm text-slate-500" data-i18n="currentValue">${TRANSLATIONS[CURRENT_LANG].currentValue}</div>
-              <div class="text-xl font-extrabold">${toMM(curVal)}</div>
+              <div class="text-xl font-extrabold">${formatMMOrExact(curVal, inv.currency)}</div>
               <div class="text-xs text-slate-500">${formatCurrency(curVal, inv.currency)}</div>
             </div>
           </div>
@@ -537,7 +541,7 @@
         data: { labels, datasets: [{ data }] },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: ctx => `${ctx.label}: ${toMM(ctx.parsed)}` } } }
+          plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatMMOrExact(ctx.parsed, 'KRW')}` } } }
         }
       });
     }
@@ -551,8 +555,8 @@
         data: { labels, datasets: [{ label: TRANSLATIONS[CURRENT_LANG].profitLoss + ' (MM)', data: values }] },
         options: {
           responsive: true, maintainAspectRatio: false,
-          scales: { y: { beginAtZero: true, ticks: { callback: v => toMM(v) } } },
-          plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${toMM(c.parsed.y)}` } } }
+          scales: { y: { beginAtZero: true, ticks: { callback: v => toMM(v, 'KRW') } } },
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${toMM(c.parsed.y, 'KRW')}` } } }
         }
       });
     }
@@ -592,7 +596,7 @@
           scales: {
             y: {
               beginAtZero: false,
-              ticks: { callback: v => toMM(v) }
+              ticks: { callback: v => toMM(v, 'KRW') }
             },
             x: {
                 ticks: {
@@ -606,7 +610,7 @@
             legend: { display: false },
             tooltip: {
               callbacks: {
-                label: c => ` ${toMM(c.parsed.y)}`
+                label: c => ` ${toMM(c.parsed.y, 'KRW')}`
               }
             }
           }
