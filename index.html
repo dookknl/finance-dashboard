@@ -281,7 +281,7 @@
       // Handle the dynamic title
       renderDashboardTitle();
       // Re-render everything with new language strings
-      renderAll(new Map()); // Pass an empty map since we don't have historical data
+      fetchDashboardData();
     }
     
     // ===================== FETCH & PARSE =====================
@@ -323,9 +323,13 @@
 
             const pricesMap = new Map();
             pricesData.forEach(price => {
-                pricesMap.set(price.asset_id, Number(price.close));
+                if (!pricesMap.has(price.asset_id)) {
+                    pricesMap.set(price.asset_id, []);
+                }
+                pricesMap.get(price.asset_id).push({ date: price.date, close: Number(price.close) });
             });
 
+            // Populate investments and cash holdings
             investments = [];
             cashByCurrency = {};
             personPositions.forEach(pos => {
@@ -336,7 +340,7 @@
                     const currency = assetRef.currency;
                     cashByCurrency[currency] = (cashByCurrency[currency] || 0) + Number(pos.qty);
                 } else {
-                    const latestPrice = pricesMap.get(pos.asset_id) || Number(assetRef.current_price);
+                    const latestPrice = (pricesMap.get(pos.asset_id) || []).slice(-1)[0]?.close || Number(assetRef.current_price);
                     investments.push({
                         name: assetRef.short_name,
                         fund_cd: pos.asset_id,
@@ -347,8 +351,8 @@
                     });
                 }
             });
-            
-            const timeline = new Map();
+
+            const timeline = buildTimeline(personPositions, pricesMap);
             
             renderAll(timeline);
             setLastUpdated();
@@ -358,6 +362,40 @@
             console.error(e);
             showBanner(e.message, 'error');
         }
+    }
+
+    function buildTimeline(positions, pricesMap) {
+        const timeline = new Map();
+        const dates = new Set();
+
+        positions.forEach(pos => {
+            const assetPrices = pricesMap.get(pos.asset_id);
+            if (!assetPrices) return;
+
+            assetPrices.forEach(price => dates.add(price.date));
+        });
+
+        const sortedDates = Array.from(dates).sort();
+
+        sortedDates.forEach(date => {
+            let dailyValue = 0;
+            positions.forEach(pos => {
+                // Find the latest price for the asset up to this date
+                const pricesForAsset = pricesMap.get(pos.asset_id) || [];
+                const priceOnDate = pricesForAsset
+                    .filter(p => p.date <= date)
+                    .sort((a, b) => b.date.localeCompare(a.date))[0];
+
+                if (priceOnDate) {
+                    dailyValue += Number(pos.qty) * priceOnDate.close;
+                } else if (pos.asset_id.startsWith('CASH')) {
+                    dailyValue += Number(pos.qty); // Add cash amount
+                }
+            });
+            timeline.set(date, dailyValue);
+        });
+        
+        return timeline;
     }
 
     // ===================== RENDER =====================
@@ -523,6 +561,52 @@
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         return;
       }
+
+      const labels = Array.from(timeline.keys());
+      const data = Array.from(timeline.values());
+      
+      badge.textContent = `${labels[0]} ~ ${labels[labels.length - 1]}`;
+
+      if (lineChart) lineChart.destroy();
+      lineChart = new Chart($('#line').getContext('2d'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Total Value (MM)',
+            data,
+            borderColor: 'rgb(79, 70, 229)',
+            backgroundColor: 'rgba(79, 70, 229, 0.1)',
+            tension: 0.3,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: false,
+              ticks: { callback: v => toMM(v) }
+            },
+            x: {
+                ticks: {
+                    autoSkip: true,
+                    maxRotation: 0,
+                    minRotation: 0
+                }
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: c => ` ${toMM(c.parsed.y)}`
+              }
+            }
+          }
+        }
+      });
     }
 
     // ===================== INTERACTION =====================
