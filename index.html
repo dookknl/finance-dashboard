@@ -580,7 +580,12 @@
           scales: {
             y: {
               beginAtZero: true,
-              ticks: { callback: v => toMM(v, 'KRW') }
+              ticks: {
+                  callback: v => {
+                      const formatted = (v / 1_000_000).toFixed(0);
+                      return `${CURRENCY_SYMBOLS['KRW']}${formatted} MM`;
+                  }
+              }
             },
             x: {
               // This ensures bars for the same fund are grouped together
@@ -591,7 +596,10 @@
             legend: { display: true }, // Show the legend to differentiate the datasets
             tooltip: {
               callbacks: {
-                label: c => ` ${c.dataset.label}: ${toMM(c.parsed.y, 'KRW')}`
+                label: c => {
+                    const formatted = (c.parsed.y / 1_000_000).toFixed(0);
+                    return ` ${c.dataset.label}: ${CURRENCY_SYMBOLS['KRW']}${formatted} MM`;
+                }
               }
             }
           }
@@ -634,7 +642,12 @@
           scales: {
             y: {
               beginAtZero: false,
-              ticks: { callback: v => toMM(v, 'KRW') }
+              ticks: {
+                  callback: v => {
+                      const formatted = (v / 1_000_000).toFixed(0);
+                      return `${CURRENCY_SYMBOLS['KRW']}${formatted} MM`;
+                  }
+              }
             },
             x: {
                 ticks: {
@@ -648,7 +661,10 @@
             legend: { display: false },
             tooltip: {
               callbacks: {
-                label: c => ` ${toMM(c.parsed.y, 'KRW')}`
+                label: c => {
+                    const formatted = (c.parsed.y / 1_000_000).toFixed(0);
+                    return ` ${CURRENCY_SYMBOLS['KRW']}${formatted} MM`;
+                }
               }
             }
           }
