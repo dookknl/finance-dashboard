@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>민채의 금융 대시보드</title>
+  <title>금융 대시보드</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -33,13 +33,17 @@
   <div class="main-container mx-auto max-w-7xl p-4 sm:p-6 lg:p-10">
     <div class="flex items-center gap-3 mb-6">
       <div class="flex items-center gap-3">
-        <div class="w-11 h-11 rounded-2xl bg-indigo-600 text-white grid place-items-center shadow-soft">M</div>
+        <div id="person-icon" class="w-11 h-11 rounded-2xl bg-indigo-600 text-white grid place-items-center shadow-soft"></div>
         <div>
-          <h1 class="text-2xl sm:text-3xl font-extrabold">민채의 투자 대시보드</h1>
+          <h1 id="dashboard-title" class="text-2xl sm:text-3xl font-extrabold"></h1>
           <p id="last-updated" class="text-xs text-slate-500 dark:text-slate-400">최근 업데이트: —</p>
         </div>
       </div>
       <div class="ml-auto flex items-center gap-2">
+        <select id="person-select" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft">
+          <option value="minchae">민채</option>
+          <option value="yeonu">Yeonu</option>
+        </select>
         <button id="refreshBtn" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft">새로고침</button>
         <button id="toggleTheme" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" title="라이트/다크 전환">🌗</button>
         <button id="fullscreen-button" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" title="전체 화면">⛶</button>
@@ -102,12 +106,14 @@
 
   <script>
     // ===================== CONFIG =====================
-    // Corrected URLs to point to the raw files in your GitHub repository
     const POSITIONS_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/holdings/positions.csv";
     const ASSETS_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/reference/assets.csv";
     const PRICES_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/prices/prices_daily.csv";
+    const PEOPLE_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/reference/people.csv";
+
     const REFRESH_MS = 5 * 60 * 1000; // 5분
-    const TARGET_PERSON = 'minchae';
+    const PEOPLE_MAP = {};
+    let TARGET_PERSON = 'minchae';
 
     // Global data stores
     let investments = [];
@@ -125,7 +131,7 @@
       const el = $('#status-banner');
       el.textContent = msg;
       el.className = `mb-4 rounded-2xl border px-4 py-3 text-sm`;
-      el.classList.add('hidden'); // Clear previous tone classes
+      el.classList.add('hidden');
       el.classList.toggle('border-amber-200', tone==='info');
       el.classList.toggle('bg-amber-50', tone==='info');
       el.classList.toggle('text-amber-800', tone==='info');
@@ -157,14 +163,19 @@
     async function fetchDashboardData() {
         showBanner('데이터를 불러오는 중입니다…', 'info');
         try {
-            const [positionsRes, assetsRes, pricesRes] = await Promise.all([
+            const [positionsRes, assetsRes, pricesRes, peopleRes] = await Promise.all([
                 fetch(POSITIONS_URL + `?t=${Date.now()}`),
                 fetch(ASSETS_URL + `?t=${Date.now()}`),
-                fetch(PRICES_URL + `?t=${Date.now()}`)
+                fetch(PRICES_URL + `?t=${Date.now()}`),
+                fetch(PEOPLE_URL + `?t=${Date.now()}`),
             ]);
             
             if (!positionsRes.ok || !assetsRes.ok || !pricesRes.ok) {
                 throw new Error("One or more data files failed to load.");
+            }
+            if (peopleRes.ok) {
+                const peopleData = parseCSV(await peopleRes.text());
+                peopleData.forEach(p => PEOPLE_MAP[p.id] = p.name);
             }
 
             const positionsText = await positionsRes.text();
@@ -175,7 +186,6 @@
             const assetsData = parseCSV(assetsText);
             const pricesData = parseCSV(pricesText);
 
-            // Process data for the target person
             const personPositions = positionsData.filter(pos => pos.person_id === TARGET_PERSON);
             
             const assetMap = new Map();
@@ -188,12 +198,11 @@
                 pricesMap.set(price.asset_id, Number(price.close));
             });
 
-            // Populate global investments and cash
             investments = [];
             let cashTotal = 0;
             personPositions.forEach(pos => {
                 const assetRef = assetMap.get(pos.asset_id);
-                if (!assetRef) return; // Skip if no reference data
+                if (!assetRef) return;
 
                 if (assetRef.type === 'cash') {
                     cashTotal += Number(pos.qty);
@@ -202,7 +211,7 @@
                     investments.push({
                         name: assetRef.short_name,
                         fund_cd: pos.asset_id,
-                        quantity: Number(pos.qty) * 1000, // Correct for display
+                        quantity: Number(pos.qty) * 1000,
                         purchasePrice: Number(pos.cost_per_unit),
                         currentPrice: latestPrice
                     });
@@ -210,8 +219,6 @@
             });
             cash = cashTotal;
 
-            // Note: Historical data is not in your provided files, so the line chart will not render.
-            // A timeline Map is created, but it will be empty.
             const timeline = new Map();
             
             renderAll(timeline);
@@ -228,11 +235,18 @@
     let donutChart, barsChart, lineChart;
 
     function renderAll(timeline){
+      renderDashboardTitle();
       renderKPIs();
       renderHoldings();
       renderDonut();
       renderBars();
       renderLine(timeline);
+    }
+
+    function renderDashboardTitle(){
+      const personName = PEOPLE_MAP[TARGET_PERSON] || TARGET_PERSON;
+      $('#dashboard-title').textContent = `${personName}의 투자 대시보드`;
+      $('#person-icon').textContent = personName.charAt(0).toUpperCase();
     }
 
     function calcTotals(){
@@ -352,13 +366,15 @@
         return;
       }
       badge.textContent = '날짜 데이터 감지됨';
-
-      // The logic for rendering the line chart is here, but it will not run
-      // because your current data source does not contain historical data.
-      // If you add a prices_history.csv, you would add the logic to process it here.
     }
 
     // ===================== INTERACTION =====================
+    function setPerson(personId) {
+      TARGET_PERSON = personId;
+      localStorage.setItem('targetPerson', personId);
+      fetchDashboardData();
+    }
+
     function enterFullscreen(){
       const el = document.documentElement;
       if (el.requestFullscreen) el.requestFullscreen();
@@ -380,9 +396,19 @@
     // ===================== INIT =====================
     window.addEventListener('load', () => {
       applyStoredTheme();
+      const storedPerson = localStorage.getItem('targetPerson');
+      if (storedPerson) {
+        TARGET_PERSON = storedPerson;
+        $('#person-select').value = storedPerson;
+      } else {
+        localStorage.setItem('targetPerson', TARGET_PERSON);
+      }
+
       $('#refreshBtn').addEventListener('click', fetchDashboardData);
       $('#toggleTheme').addEventListener('click', toggleTheme);
       $('#fullscreen-button').addEventListener('click', enterFullscreen);
+      $('#person-select').addEventListener('change', (e) => setPerson(e.target.value));
+
       fetchDashboardData();
       setInterval(fetchDashboardData, REFRESH_MS);
     });
