@@ -548,15 +548,53 @@
 
     function renderBars(){
       const labels = investments.map(i => i.name);
-      const values = investments.map(i => i.quantity * ((i.currentPrice || 0) - i.purchasePrice));
+
+      // Calculate the current value and initial cost for each investment
+      const currentValues = investments.map(i => i.quantity * (i.currentPrice || 0));
+      const initialCosts = investments.map(i => i.quantity * i.purchasePrice);
+
       if (barsChart) barsChart.destroy();
       barsChart = new Chart($('#bars').getContext('2d'), {
         type: 'bar',
-        data: { labels, datasets: [{ label: TRANSLATIONS[CURRENT_LANG].profitLoss + ' (MM)', data: values }] },
+        data: {
+          labels,
+          // Add a separate dataset for current value
+          datasets: [{
+            label: 'Current Value (MM)',
+            data: currentValues,
+            backgroundColor: 'rgba(79, 70, 229, 0.8)', // Example color
+            borderColor: 'rgba(79, 70, 229, 1)',
+            borderWidth: 1
+          },
+          // Add a second dataset for initial cost
+          {
+            label: 'Initial Cost (MM)',
+            data: initialCosts,
+            backgroundColor: 'rgba(107, 114, 128, 0.8)', // Example color for comparison
+            borderColor: 'rgba(107, 114, 128, 1)',
+            borderWidth: 1
+          }]
+        },
         options: {
           responsive: true, maintainAspectRatio: false,
-          scales: { y: { beginAtZero: true, ticks: { callback: v => toMM(v, 'KRW') } } },
-          plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${toMM(c.parsed.y, 'KRW')}` } } }
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { callback: v => toMM(v, 'KRW') }
+            },
+            x: {
+              // This ensures bars for the same fund are grouped together
+              stacked: false
+            }
+          },
+          plugins: {
+            legend: { display: true }, // Show the legend to differentiate the datasets
+            tooltip: {
+              callbacks: {
+                label: c => ` ${c.dataset.label}: ${toMM(c.parsed.y, 'KRW')}`
+              }
+            }
+          }
         }
       });
     }
