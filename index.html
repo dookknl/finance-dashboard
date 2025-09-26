@@ -574,7 +574,7 @@
         options: {
           responsive: true, maintainAspectRatio: false,
           scales: {
-            y: { beginAtZero: true, ticks: { callback: v => `${CURRENCY_SYMBOLS['KRW']}${(v/1_000_000).toFixed(0)} MM` } },
+            y: { beginAtZero: false, ticks: { callback: v => `${(v/1_000_000).toFixed(1)} MM` } },
             x: { stacked: false }
           },
           plugins: {
@@ -595,9 +595,14 @@
         return;
       }
 
-      const labels = Array.from(timeline.keys());
+      const rawLabels = Array.from(timeline.keys());
       const data = Array.from(timeline.values());
-      badge.textContent = `${labels[0]} ~ ${labels[labels.length - 1]}`;
+      // Format X axis as YY-MM
+      const labels = rawLabels.map(d => {
+        const [y,m] = d.split('-');
+        return `${y.slice(2)}-${m}`;
+      });
+      badge.textContent = `${rawLabels[0]} ~ ${rawLabels[rawLabels.length - 1]}`;
 
       if (lineChart) lineChart.destroy();
       lineChart = new Chart($('#line').getContext('2d'), {
@@ -609,7 +614,7 @@
             y: { beginAtZero: false, ticks: { callback: v => `${CURRENCY_SYMBOLS['KRW']}${(v/1_000_000).toFixed(0)} MM` } },
             x: { ticks: { autoSkip: true, maxRotation: 0, minRotation: 0 } }
           },
-          plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${CURRENCY_SYMBOLS['KRW']}${(c.parsed.y/1_000_000).toFixed(0)} MM` } } }
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${(c.parsed.y/1_000_000).toFixed(1)} MM` } } }
         }
       });
     }
