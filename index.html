@@ -118,8 +118,6 @@
     const ASSETS_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/reference/assets.csv";
     const PRICES_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/prices/prices_daily.csv";
     const PEOPLE_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/reference/people.csv";
-    // NEW: optional FX table (simple: currency,krw_rate)
-    const FX_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/reference/fx_rates.csv"; // currency,krw_rate
 
     const REFRESH_MS = 5 * 60 * 1000;
     const PEOPLE_MAP = {};
@@ -131,11 +129,16 @@
     // Global data stores
     let investments = [];
     let cashByCurrency = {};
-    let fxKRW = { KRW: 1 }; // currency-> KRW rate
-    const MM_THRESHOLD = 1_000_000; // 1 million
+    const MM_THRESHOLD = 1000000; // 1 million
 
     // Currency symbols map
-    const CURRENCY_SYMBOLS = { 'KRW': '₩', 'USD': '$', 'EUR': '€', 'JPY': '¥', 'CNY': '¥' };
+    const CURRENCY_SYMBOLS = {
+      'KRW': '₩',
+      'USD': '$',
+      'EUR': '€',
+      'JPY': '¥',
+      'CNY': '¥'
+    };
 
     const TRANSLATIONS = {
       ko: {
@@ -146,16 +149,16 @@
         autoOn: "▶️",
         autoOff: "⏸️",
         minchae: "민채",
-        yeonu: "연우",
-        kpiTotalLabel: "총 평가액 (KRW)",
-        kpiProfitLossLabel: "총 손익 (KRW)",
+        yeonu: "Yeonu",
+        kpiTotalLabel: "총 평가액",
+        kpiProfitLossLabel: "총 손익",
         kpiCashLabel: "총 현금",
         kpiCashSubLabel: "안전 자산",
         kpiCountLabel: "보유 자산 수",
         kpiCountSubLabel: "펀드 + 현금",
-        assetAllocationTitle: "자산 배분 (KRW 환산)",
-        profitLossByAssetTitle: "자산별 손익 (KRW)",
-        portfolioTrendTitle: "포트폴리오 추이 (KRW)",
+        assetAllocationTitle: "자산 배분",
+        profitLossByAssetTitle: "자산별 손익",
+        portfolioTrendTitle: "포트폴리오 추이",
         holdingsTitle: "보유 자산",
         holdingsSubtitle: "카드를 탭하면 상세가 펼쳐집니다",
         cashHoldingsTitle: "현금 보유",
@@ -181,15 +184,15 @@
         autoOff: "⏸️",
         minchae: "Minchae",
         yeonu: "Yeonu",
-        kpiTotalLabel: "Total Valuation (KRW)",
-        kpiProfitLossLabel: "Total P/L (KRW)",
+        kpiTotalLabel: "Total Valuation",
+        kpiProfitLossLabel: "Total P/L",
         kpiCashLabel: "Total Cash",
         kpiCashSubLabel: "Safe Assets",
         kpiCountLabel: "Total Holdings",
         kpiCountSubLabel: "Funds + Cash",
-        assetAllocationTitle: "Asset Allocation (KRW)",
-        profitLossByAssetTitle: "P/L by Asset (KRW)",
-        portfolioTrendTitle: "Portfolio Trend (KRW)",
+        assetAllocationTitle: "Asset Allocation",
+        profitLossByAssetTitle: "P/L by Asset",
+        portfolioTrendTitle: "Portfolio Trend",
         holdingsTitle: "Holdings",
         holdingsSubtitle: "Tap card for details",
         cashHoldingsTitle: "Cash Holdings",
@@ -215,7 +218,7 @@
 
     const nf = new Intl.NumberFormat('ko-KR');
     const nfc = new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
+    
     function formatCurrency(n, currency) {
       const symbol = CURRENCY_SYMBOLS[currency] || currency;
       return `${symbol}${nf.format(Math.round(n || 0))}`;
@@ -228,8 +231,11 @@
     }
 
     function formatMMOrExact(n, currency) {
-      if (Math.abs(n) < MM_THRESHOLD) return formatCurrency(n, currency);
-      return toMM(n, currency);
+      if (Math.abs(n) < MM_THRESHOLD) {
+        return formatCurrency(n, currency);
+      } else {
+        return toMM(n, currency);
+      }
     }
 
     function showBanner(msg, tone='info') {
@@ -250,160 +256,154 @@
     function setLastUpdated(){ $('#last-updated').textContent = `${TRANSLATIONS[CURRENT_LANG].lastUpdated.split(':')[0]}: ${new Date().toLocaleString(CURRENT_LANG === 'ko' ? 'ko-KR' : 'en-US')}`; }
 
     function parseCSV(text) {
-      const rows = text.trim().split(/\r?\n/);
-      const headers = rows[0].split(SAFE_CSV_SPLIT).map(h => h.trim().replace(/"/g, ''));
-      const data = [];
-      for (let i = 1; i < rows.length; i++) {
-        if (!rows[i].trim()) continue;
-        const values = rows[i].split(SAFE_CSV_SPLIT).map(v => v.trim().replace(/"/g, ''));
-        const row = {};
-        headers.forEach((h, idx) => row[h] = values[idx]);
-        data.push(row);
-      }
-      return data;
+        const rows = text.trim().split(/\r?\n/);
+        const headers = rows[0].split(SAFE_CSV_SPLIT).map(h => h.trim().replace(/"/g, ''));
+        const data = [];
+        for (let i = 1; i < rows.length; i++) {
+            const values = rows[i].split(SAFE_CSV_SPLIT).map(v => v.trim().replace(/"/g, ''));
+            const row = {};
+            headers.forEach((h, idx) => {
+                row[h] = values[idx];
+            });
+            data.push(row);
+        }
+        return data;
     }
 
     function applyTranslations(lang) {
       $$('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
-        const text = TRANSLATIONS[lang][key];
-        if (text !== undefined) el.textContent = text;
+        let text = TRANSLATIONS[lang][key];
+        if (el.tagName === 'INPUT' || el.tagName === 'SELECT') {
+          el.options.forEach(option => {
+            if (option.value === el.value) {
+              option.textContent = text;
+            }
+          });
+        } else if (el.tagName === 'OPTION') {
+          el.textContent = text;
+        } else {
+          el.textContent = text;
+        }
       });
+      // Handle the dynamic title and button text
       renderDashboardTitle();
-      $('#toggle-auto').textContent = switcherInterval ? TRANSLATIONS[CURRENT_LANG].autoOff : TRANSLATIONS[CURRENT_LANG].autoOn;
+      const autoButton = $('#toggle-auto');
+      autoButton.textContent = switcherInterval ? TRANSLATIONS[CURRENT_LANG].autoOff : TRANSLATIONS[CURRENT_LANG].autoOn;
+      
+      // Re-render everything with new language strings
       fetchDashboardData();
     }
-
-    function toKRW(amount, currency){
-      const r = fxKRW[currency];
-      if (r === undefined) return NaN; // signal missing rate
-      return amount * r;
-    }
-
+    
     // ===================== FETCH & PARSE =====================
     async function fetchDashboardData() {
-      showBanner(TRANSLATIONS[CURRENT_LANG].fetching, 'info');
-      try {
-        const [positionsRes, assetsRes, pricesRes, peopleRes, fxRes] = await Promise.all([
-          fetch(POSITIONS_URL + `?t=${Date.now()}`),
-          fetch(ASSETS_URL + `?t=${Date.now()}`),
-          fetch(PRICES_URL + `?t=${Date.now()}`),
-          fetch(PEOPLE_URL + `?t=${Date.now()}`),
-          fetch(FX_URL + `?t=${Date.now()}`).catch(() => ({ ok:false }))
-        ]);
+        showBanner(TRANSLATIONS[CURRENT_LANG].fetching, 'info');
+        try {
+            const [positionsRes, assetsRes, pricesRes, peopleRes] = await Promise.all([
+              fetch(POSITIONS_URL + `?t=${Date.now()}`),
+              fetch(ASSETS_URL + `?t=${Date.now()}`),
+              fetch(PRICES_URL + `?t=${Date.now()}`),
+              fetch(PEOPLE_URL + `?t=${Date.now()}`),
+            ]);
+            
+            if (!positionsRes.ok || !assetsRes.ok || !pricesRes.ok) {
+                throw new Error(TRANSLATIONS[CURRENT_LANG].fetchError);
+            }
+            if (peopleRes.ok) {
+                const peopleData = parseCSV(await peopleRes.text());
+                peopleData.forEach(p => PEOPLE_MAP[p.id] = p.name);
+            }
 
-        if (peopleRes.ok) {
-          const peopleData = parseCSV(await peopleRes.text());
-          peopleData.forEach(p => PEOPLE_MAP[p.id] = p.name);
-        }
+            const positionsText = await positionsRes.text();
+            const assetsText = await assetsRes.text();
+            const pricesText = await pricesRes.text();
 
-        if (!positionsRes.ok || !assetsRes.ok || !pricesRes.ok) throw new Error(TRANSLATIONS[CURRENT_LANG].fetchError);
+            const positionsData = parseCSV(positionsText);
+            const assetsData = parseCSV(assetsText);
+            const pricesData = parseCSV(pricesText);
 
-        // FX (optional)
-        fxKRW = { KRW: 1 };
-        if (fxRes && fxRes.ok){
-          const fxRows = parseCSV(await fxRes.text());
-          fxRows.forEach(r => {
-            const c = (r.currency||'').trim();
-            const rate = Number(r.krw_rate);
-            if (c && !isNaN(rate) && rate>0) fxKRW[c] = rate;
-          });
-        }
-
-        const positionsData = parseCSV(await positionsRes.text());
-        const assetsData = parseCSV(await assetsRes.text());
-        const pricesData = parseCSV(await pricesRes.text());
-
-        const personPositions = positionsData.filter(pos => pos.person_id === TARGET_PERSON);
-
-        const assetMap = new Map();
-        assetsData.forEach(asset => assetMap.set(asset.asset_id, asset));
-
-        const pricesMap = new Map();
-        pricesData.forEach(price => {
-          if (!pricesMap.has(price.asset_id)) pricesMap.set(price.asset_id, []);
-          pricesMap.get(price.asset_id).push({ date: price.date, close: Number(price.close) });
-        });
-        // ensure sorted asc
-        for (const arr of pricesMap.values()) arr.sort((a,b)=>a.date.localeCompare(b.date));
-
-        // Populate investments and cash holdings
-        investments = [];
-        cashByCurrency = {};
-        personPositions.forEach(pos => {
-          const assetRef = assetMap.get(pos.asset_id);
-          if (!assetRef) return;
-
-          if (assetRef.type === 'cash') {
-            const currency = assetRef.currency || 'KRW';
-            cashByCurrency[currency] = (cashByCurrency[currency] || 0) + Number(pos.qty);
-          } else {
-            const latestPrice = (pricesMap.get(pos.asset_id) || []).slice(-1)[0]?.close || Number(assetRef.current_price);
-            investments.push({
-              name: assetRef.short_name,
-              fund_cd: pos.asset_id,
-              quantity: Number(pos.qty),
-              purchasePrice: Number(pos.cost_per_unit),
-              currentPrice: Number(latestPrice),
-              currency: assetRef.currency || 'KRW'
+            const personPositions = positionsData.filter(pos => pos.person_id === TARGET_PERSON);
+            
+            const assetMap = new Map();
+            assetsData.forEach(asset => {
+                assetMap.set(asset.asset_id, asset);
             });
-          }
-        });
 
-        const timeline = buildTimeline(personPositions, pricesMap, assetMap);
+            const pricesMap = new Map();
+            pricesData.forEach(price => {
+                if (!pricesMap.has(price.asset_id)) {
+                    pricesMap.set(price.asset_id, []);
+                }
+                pricesMap.get(price.asset_id).push({ date: price.date, close: Number(price.close) });
+            });
 
-        renderAll(timeline);
-        setLastUpdated();
-        hideBanner();
-      } catch (e) {
-        console.error(e);
-        showBanner(e.message, 'error');
-      }
+            // Populate investments and cash holdings
+            investments = [];
+            cashByCurrency = {};
+            personPositions.forEach(pos => {
+                const assetRef = assetMap.get(pos.asset_id);
+                if (!assetRef) return;
+
+                if (assetRef.type === 'cash') {
+                    const currency = assetRef.currency;
+                    cashByCurrency[currency] = (cashByCurrency[currency] || 0) + Number(pos.qty);
+                } else {
+                    const latestPrice = (pricesMap.get(pos.asset_id) || []).slice(-1)[0]?.close || Number(assetRef.current_price);
+                    investments.push({
+                        name: assetRef.short_name,
+                        fund_cd: pos.asset_id,
+                        quantity: Number(pos.qty),
+                        purchasePrice: Number(pos.cost_per_unit),
+                        currentPrice: latestPrice,
+                        currency: assetRef.currency
+                    });
+                }
+            });
+
+            const timeline = buildTimeline(personPositions, pricesMap);
+            
+            renderAll(timeline);
+            setLastUpdated();
+            hideBanner();
+
+        } catch (e) {
+            console.error(e);
+            showBanner(e.message, 'error');
+        }
     }
 
-    function buildTimeline(positions, pricesMap, assetMap) {
-      const timeline = new Map();
-      const dates = new Set();
+    function buildTimeline(positions, pricesMap) {
+        const timeline = new Map();
+        const dates = new Set();
 
-      positions.forEach(pos => {
-        const asset = assetMap.get(pos.asset_id);
-        if (!asset) return;
-        if (asset.type === 'cash') {
-          // cash will be constant over time, but include at least one date marker if we have any prices for others
-          return; // handled separately as constant value later
-        }
-        const assetPrices = pricesMap.get(pos.asset_id);
-        if (!assetPrices) return;
-        assetPrices.forEach(price => dates.add(price.date));
-      });
-
-      const sortedDates = Array.from(dates).sort();
-
-      sortedDates.forEach(date => {
-        let dailyValueKRW = 0;
-        // securities
         positions.forEach(pos => {
-          const asset = assetMap.get(pos.asset_id);
-          if (!asset) return;
-          if (asset.type !== 'cash') {
-            const pricesForAsset = pricesMap.get(pos.asset_id) || [];
-            const priceOnDate = pricesForAsset.filter(p => p.date <= date).sort((a,b)=>b.date.localeCompare(a.date))[0];
-            if (priceOnDate) {
-              const cur = Number(pos.qty) * Number(priceOnDate.close);
-              const curKRW = toKRW(cur, asset.currency || 'KRW');
-              if (!isNaN(curKRW)) dailyValueKRW += curKRW;
-            }
-          }
-        });
-        // cash (assumed constant; convert to KRW at current fx)
-        for (const [ccy, amt] of Object.entries(cashByCurrency)){
-          const cKRW = toKRW(amt, ccy);
-          if (!isNaN(cKRW)) dailyValueKRW += cKRW;
-        }
-        timeline.set(date, dailyValueKRW);
-      });
+            const assetPrices = pricesMap.get(pos.asset_id);
+            if (!assetPrices) return;
 
-      return timeline;
+            assetPrices.forEach(price => dates.add(price.date));
+        });
+
+        const sortedDates = Array.from(dates).sort();
+
+        sortedDates.forEach(date => {
+            let dailyValue = 0;
+            positions.forEach(pos => {
+                // Find the latest price for the asset up to this date
+                const pricesForAsset = pricesMap.get(pos.asset_id) || [];
+                const priceOnDate = pricesForAsset
+                    .filter(p => p.date <= date)
+                    .sort((a, b) => b.date.localeCompare(a.date))[0];
+
+                if (priceOnDate) {
+                    dailyValue += Number(pos.qty) * priceOnDate.close;
+                } else if (pos.asset_id.startsWith('CASH')) {
+                    dailyValue += Number(pos.qty); // Add cash amount
+                }
+            });
+            timeline.set(date, dailyValue);
+        });
+        
+        return timeline;
     }
 
     // ===================== RENDER =====================
@@ -420,72 +420,64 @@
     }
 
     function renderDashboardTitle(){
-      const personName = PEOPLE_MAP[TARGET_PERSON] || (TRANSLATIONS[CURRENT_LANG][TARGET_PERSON] || TARGET_PERSON);
+      const personName = PEOPLE_MAP[TARGET_PERSON] || TARGET_PERSON;
       $('#dashboard-title').textContent = `${personName}${TRANSLATIONS[CURRENT_LANG].dashboardTitle}`;
       $('#person-icon').textContent = personName.charAt(0).toUpperCase();
     }
 
     function calcTotals(){
-      // Compute totals in KRW using FX; also compute native-cost P/L per investment (in its native ccy)
-      let totalValKRW = 0;
-      let totalCostKRW = 0;
-      let totalCashKRW = 0;
-
-      for (const [ccy, amt] of Object.entries(cashByCurrency)){
-        const k = toKRW(amt, ccy);
-        if (!isNaN(k)) totalCashKRW += k;
+      let totalVal = 0;
+      let totalCost = 0;
+      let totalCash = 0;
+      for (const currency in cashByCurrency) {
+          totalCash += cashByCurrency[currency]; // We'll assume cash values are in KRW for total calculation for now
       }
-
+      totalVal += totalCash;
+      totalCost += totalCash;
       for (const inv of investments){
-        const curValNative = (inv.currentPrice||0) * inv.quantity;
-        const costNative = inv.purchasePrice * inv.quantity;
-        const curValKRW = toKRW(curValNative, inv.currency);
-        const costKRW = toKRW(costNative, inv.currency);
-        if (!isNaN(curValKRW)) totalValKRW += curValKRW; else totalValKRW += 0;
-        if (!isNaN(costKRW)) totalCostKRW += costKRW; else totalCostKRW += 0;
+        const curVal = (inv.currentPrice||0) * inv.quantity;
+        const cost = inv.purchasePrice * inv.quantity;
+        totalVal += curVal;
+        totalCost += cost;
       }
-
-      totalValKRW += totalCashKRW;
-      totalCostKRW += totalCashKRW; // treat cash cost = cash amount
-      return { totalValKRW, totalCostKRW, totalPLKRW: totalValKRW - totalCostKRW, totalCashKRW };
+      return { totalVal, totalCost, totalPL: totalVal - totalCost, totalCash: totalCash };
     }
 
     function renderKPIs(){
-      const { totalValKRW, totalCostKRW, totalPLKRW, totalCashKRW } = calcTotals();
-      $('#kpi-total').textContent = formatMMOrExact(totalValKRW, 'KRW');
-      $('#kpi-total-mm').textContent = formatCurrency(totalValKRW, 'KRW');
-      $('#kpi-cash').textContent = formatMMOrExact(totalCashKRW, 'KRW');
+      const { totalVal, totalCost, totalPL, totalCash } = calcTotals();
+      $('#kpi-total').textContent = formatMMOrExact(totalVal, 'KRW');
+      $('#kpi-total-mm').textContent = formatCurrency(totalVal, 'KRW');
+      $('#kpi-cash').textContent = formatMMOrExact(totalCash, 'KRW');
       $('#kpi-count').textContent = String(investments.length + Object.keys(cashByCurrency).length);
 
-      const rate = totalCostKRW > 0 ? (totalPLKRW / totalCostKRW) * 100 : 0;
+      const rate = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
       const plEl = $('#kpi-pl');
-      plEl.textContent = `${totalPLKRW >= 0 ? '+' : ''}${formatMMOrExact(Math.abs(totalPLKRW), 'KRW')}`;
+      plEl.textContent = `${totalPL >= 0 ? '+' : ''}${formatMMOrExact(Math.abs(totalPL), 'KRW')}`;
       const rateEl = $('#kpi-pl-rate');
       rateEl.textContent = `${TRANSLATIONS[CURRENT_LANG].rateOfReturn} ${rate >= 0 ? '+' : ''}${nfc.format(rate)}%`;
-      plEl.classList.toggle('text-emerald-600', totalPLKRW >= 0);
-      plEl.classList.toggle('text-rose-600', totalPLKRW < 0);
+      plEl.classList.toggle('text-emerald-600', totalPL >= 0);
+      plEl.classList.toggle('text-rose-600', totalPL < 0);
     }
 
     function renderCashHoldings() {
-      const wrap = $('#cash-holdings');
-      wrap.innerHTML = '';
-      if (Object.keys(cashByCurrency).length === 0) {
-        $('#cash-holdings-section').style.display = 'none';
-      } else {
-        $('#cash-holdings-section').style.display = 'block';
-        for (const currency in cashByCurrency) {
-          const amount = cashByCurrency[currency];
-          const card = document.createElement('div');
-          card.className = 'bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 shadow-soft';
-          const amountKRW = toKRW(amount, currency);
-          card.innerHTML = `
-            <div class="text-sm text-slate-500 dark:text-slate-400">${TRANSLATIONS[CURRENT_LANG].kpiCashLabel} (${currency})</div>
-            <div class="text-3xl font-extrabold mt-1 tracking-tight">${formatMMOrExact(amount, currency)}</div>
-            <div class="text-xs text-slate-500 mt-1">${!isNaN(amountKRW) ? '≈ ' + formatMMOrExact(amountKRW, 'KRW') : 'FX —'}</div>
-          `;
-          wrap.appendChild(card);
+        const wrap = $('#cash-holdings');
+        wrap.innerHTML = '';
+        if (Object.keys(cashByCurrency).length === 0) {
+            $('#cash-holdings-section').style.display = 'none';
+        } else {
+            $('#cash-holdings-section').style.display = 'block';
+            for (const currency in cashByCurrency) {
+                const amount = cashByCurrency[currency];
+                const card = document.createElement('div');
+                card.className = 'bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 shadow-soft';
+                card.innerHTML = `
+                    <div class="text-sm text-slate-500 dark:text-slate-400">${TRANSLATIONS[CURRENT_LANG].kpiCashLabel} (${currency})</div>
+                    <div class="text-3xl font-extrabold mt-1 tracking-tight">${formatMMOrExact(amount, currency)}</div>
+                    <div class="text-xs text-slate-500 mt-1">${formatCurrency(amount, currency)}</div>
+                `;
+                wrap.appendChild(card);
+            }
         }
-      }
     }
 
     function renderHoldings(){
@@ -496,8 +488,6 @@
         const cost = inv.quantity * inv.purchasePrice;
         const pl = curVal - cost;
         const gain = pl >= 0;
-        const curValKRW = toKRW(curVal, inv.currency);
-        const plKRW = !isNaN(curValKRW) ? curValKRW - toKRW(cost, inv.currency) : NaN;
         const card = document.createElement('div');
         card.className = 'bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 shadow-soft hover:shadow transition-all cursor-pointer';
         card.innerHTML = `
@@ -509,7 +499,7 @@
             <div class="text-right">
               <div class="text-sm text-slate-500" data-i18n="currentValue">${TRANSLATIONS[CURRENT_LANG].currentValue}</div>
               <div class="text-xl font-extrabold">${formatMMOrExact(curVal, inv.currency)}</div>
-              <div class="text-xs text-slate-500">${!isNaN(curValKRW) ? '≈ ' + formatMMOrExact(curValKRW, 'KRW') : 'FX —'}</div>
+              <div class="text-xs text-slate-500">${formatCurrency(curVal, inv.currency)}</div>
             </div>
           </div>
           <div class="card-details mt-4 text-sm">
@@ -528,7 +518,7 @@
               </div>
               <div>
                 <div class="text-slate-500" data-i18n="profitLoss">${TRANSLATIONS[CURRENT_LANG].profitLoss}</div>
-                <div class="font-semibold ${gain ? 'text-emerald-600' : 'text-rose-600'}">${gain ? '+' : ''}${formatCurrency(Math.abs(pl), inv.currency)} <span class="text-slate-400">(${!isNaN(plKRW) ? (plKRW>=0?'+':'')+formatCurrency(Math.abs(plKRW), 'KRW') : 'FX —'})</span></div>
+                <div class="font-semibold ${gain ? 'text-emerald-600' : 'text-rose-600'}">${gain ? '+' : ''}${formatCurrency(Math.abs(pl), inv.currency)}</div>
               </div>
             </div>
           </div>
@@ -539,16 +529,16 @@
     }
 
     function renderDonut(){
-      // Convert all to KRW for allocation comparison
+      const cashTotal = Object.values(cashByCurrency).reduce((sum, val) => sum + val, 0);
       const labels = [...investments.map(i => i.name), TRANSLATIONS[CURRENT_LANG].kpiCashLabel];
-      const dataKRW = [
-        ...investments.map(i => toKRW(i.quantity * (i.currentPrice || 0), i.currency) || 0),
-        Object.entries(cashByCurrency).reduce((sum,[ccy,amt]) => sum + (toKRW(amt, ccy)||0), 0)
+      const data = [
+        ...investments.map(i => i.quantity * (i.currentPrice || 0)),
+        cashTotal
       ];
       if (donutChart) donutChart.destroy();
       donutChart = new Chart($('#donut').getContext('2d'), {
         type: 'doughnut',
-        data: { labels, datasets: [{ data: dataKRW }] },
+        data: { labels, datasets: [{ data }] },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatMMOrExact(ctx.parsed, 'KRW')}` } } }
@@ -558,28 +548,60 @@
 
     function renderBars(){
       const labels = investments.map(i => i.name);
-      const currentValuesKRW = investments.map(i => toKRW(i.quantity * (i.currentPrice || 0), i.currency) || 0);
-      const initialCostsKRW = investments.map(i => toKRW(i.quantity * i.purchasePrice, i.currency) || 0);
+
+      // Calculate the current value and initial cost for each investment
+      const currentValues = investments.map(i => i.quantity * (i.currentPrice || 0));
+      const initialCosts = investments.map(i => i.quantity * i.purchasePrice);
 
       if (barsChart) barsChart.destroy();
       barsChart = new Chart($('#bars').getContext('2d'), {
         type: 'bar',
         data: {
           labels,
-          datasets: [
-            { label: CURRENT_LANG==='ko' ? '현재 평가액 (KRW)' : 'Current Value (KRW)', data: currentValuesKRW, borderWidth: 1 },
-            { label: CURRENT_LANG==='ko' ? '매입 원가 (KRW)' : 'Initial Cost (KRW)', data: initialCostsKRW, borderWidth: 1 }
-          ]
+          // Add a separate dataset for current value
+          datasets: [{
+            label: 'Current Value (MM)',
+            data: currentValues,
+            backgroundColor: 'rgba(79, 70, 229, 0.8)', // Example color
+            borderColor: 'rgba(79, 70, 229, 1)',
+            borderWidth: 1
+          },
+          // Add a second dataset for initial cost
+          {
+            label: 'Initial Cost (MM)',
+            data: initialCosts,
+            backgroundColor: 'rgba(107, 114, 128, 0.8)', // Example color for comparison
+            borderColor: 'rgba(107, 114, 128, 1)',
+            borderWidth: 1
+          }]
         },
         options: {
           responsive: true, maintainAspectRatio: false,
           scales: {
-            y: { beginAtZero: false, ticks: { callback: v => `${(v/1_000_000).toFixed(1)} MM` } },
-            x: { stacked: false }
+            y: {
+              beginAtZero: true,
+              ticks: {
+                  callback: v => {
+                      const formatted = (v / 1_000_000).toFixed(0);
+                      return `${CURRENCY_SYMBOLS['KRW']}${formatted} MM`;
+                  }
+              }
+            },
+            x: {
+              // This ensures bars for the same fund are grouped together
+              stacked: false
+            }
           },
           plugins: {
-            legend: { display: true },
-            tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${CURRENCY_SYMBOLS['KRW']}${(c.parsed.y/1_000_000).toFixed(0)} MM` } }
+            legend: { display: true }, // Show the legend to differentiate the datasets
+            tooltip: {
+              callbacks: {
+                label: c => {
+                    const formatted = (c.parsed.y / 1_000_000).toFixed(0);
+                    return ` ${c.dataset.label}: ${CURRENCY_SYMBOLS['KRW']}${formatted} MM`;
+                }
+              }
+            }
           }
         }
       });
@@ -595,26 +617,57 @@
         return;
       }
 
-      const rawLabels = Array.from(timeline.keys());
+      const labels = Array.from(timeline.keys());
       const data = Array.from(timeline.values());
-      // Format X axis as YY-MM
-      const labels = rawLabels.map(d => {
-        const [y,m] = d.split('-');
-        return `${y.slice(2)}-${m}`;
-      });
-      badge.textContent = `${rawLabels[0]} ~ ${rawLabels[rawLabels.length - 1]}`;
+      
+      badge.textContent = `${labels[0]} ~ ${labels[labels.length - 1]}`;
 
       if (lineChart) lineChart.destroy();
       lineChart = new Chart($('#line').getContext('2d'), {
         type: 'line',
-        data: { labels, datasets: [{ label: CURRENT_LANG==='ko'? '총 평가액 (KRW)' : 'Total Value (KRW)', data, tension: 0.3, fill: true }] },
+        data: {
+          labels,
+          datasets: [{
+            label: 'Total Value (MM)',
+            data,
+            borderColor: 'rgb(79, 70, 229)',
+            backgroundColor: 'rgba(79, 70, 229, 0.1)',
+            tension: 0.3,
+            fill: true
+          }]
+        },
         options: {
-          responsive: true, maintainAspectRatio: false,
+          responsive: true,
+          maintainAspectRatio: false,
           scales: {
-            y: { beginAtZero: false, ticks: { callback: v => `${CURRENCY_SYMBOLS['KRW']}${(v/1_000_000).toFixed(0)} MM` } },
-            x: { ticks: { autoSkip: true, maxRotation: 0, minRotation: 0 } }
+            y: {
+              beginAtZero: false,
+              ticks: {
+                  callback: v => {
+                      const formatted = (v / 1_000_000).toFixed(0);
+                      return `${CURRENCY_SYMBOLS['KRW']}${formatted} MM`;
+                  }
+              }
+            },
+            x: {
+                ticks: {
+                    autoSkip: true,
+                    maxRotation: 0,
+                    minRotation: 0
+                }
+            }
           },
-          plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${(c.parsed.y/1_000_000).toFixed(1)} MM` } } }
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: c => {
+                    const formatted = (c.parsed.y / 1_000_000).toFixed(0);
+                    return ` ${CURRENCY_SYMBOLS['KRW']}${formatted} MM`;
+                }
+              }
+            }
+          }
         }
       });
     }
@@ -623,10 +676,10 @@
     function setPerson(personId) {
       TARGET_PERSON = personId;
       localStorage.setItem('targetPerson', personId);
-      $('#person-select').value = personId;
+      $('#person-select').value = personId; // Update the UI selector
       fetchDashboardData();
     }
-
+    
     function setLanguage(lang) {
       CURRENT_LANG = lang;
       localStorage.setItem('dashboardLang', lang);
@@ -652,56 +705,68 @@
     }
 
     function toggleSwitcher() {
-      const button = $('#toggle-auto');
-      if (switcherInterval) {
-        clearInterval(switcherInterval); switcherInterval = null;
-        button.textContent = TRANSLATIONS[CURRENT_LANG].autoOn;
-        localStorage.setItem('autoSwitchEnabled', 'false');
-      } else {
-        switcherInterval = setInterval(() => {
-          const currentIndex = PEOPLE_IDS.indexOf(TARGET_PERSON);
-          const nextIndex = (currentIndex + 1) % PEOPLE_IDS.length;
-          setPerson(PEOPLE_IDS[nextIndex]);
-        }, 15000);
-        button.textContent = TRANSLATIONS[CURRENT_LANG].autoOff;
-        localStorage.setItem('autoSwitchEnabled', 'true');
-      }
+        const button = $('#toggle-auto');
+        if (switcherInterval) {
+            clearInterval(switcherInterval);
+            switcherInterval = null;
+            button.textContent = TRANSLATIONS[CURRENT_LANG].autoOn;
+            localStorage.setItem('autoSwitchEnabled', 'false');
+        } else {
+            switcherInterval = setInterval(() => {
+                const currentIndex = PEOPLE_IDS.indexOf(TARGET_PERSON);
+                const nextIndex = (currentIndex + 1) % PEOPLE_IDS.length;
+                setPerson(PEOPLE_IDS[nextIndex]);
+            }, 15000); // 15 seconds
+            button.textContent = TRANSLATIONS[CURRENT_LANG].autoOff;
+            localStorage.setItem('autoSwitchEnabled', 'true');
+        }
     }
 
     function populatePersonSelector() {
-      const selector = $('#person-select');
-      selector.innerHTML = '';
-      for (const id of PEOPLE_IDS) {
-        const option = document.createElement('option');
-        option.value = id;
-        option.textContent = PEOPLE_MAP[id] || (TRANSLATIONS[CURRENT_LANG][id] || id.charAt(0).toUpperCase());
-        selector.appendChild(option);
-      }
-      selector.value = TARGET_PERSON;
+        const selector = $('#person-select');
+        selector.innerHTML = '';
+        for (const id of PEOPLE_IDS) {
+            const option = document.createElement('option');
+            option.value = id;
+            option.textContent = id.charAt(0).toUpperCase();
+            selector.appendChild(option);
+        }
+        selector.value = TARGET_PERSON;
     }
 
     // ===================== INIT =====================
     window.addEventListener('load', () => {
       applyStoredTheme();
       const storedPerson = localStorage.getItem('targetPerson');
-      if (storedPerson) TARGET_PERSON = storedPerson; else localStorage.setItem('targetPerson', TARGET_PERSON);
-
+      if (storedPerson) {
+        TARGET_PERSON = storedPerson;
+      } else {
+        localStorage.setItem('targetPerson', TARGET_PERSON);
+      }
+      
       const storedLang = localStorage.getItem('dashboardLang');
-      if (storedLang) { CURRENT_LANG = storedLang; $('#lang-select').value = storedLang; } else { localStorage.setItem('dashboardLang', CURRENT_LANG); }
+      if (storedLang) {
+        CURRENT_LANG = storedLang;
+        $('#lang-select').value = storedLang;
+      } else {
+        localStorage.setItem('dashboardLang', CURRENT_LANG);
+      }
 
       const autoSwitchEnabled = localStorage.getItem('autoSwitchEnabled');
-      if (autoSwitchEnabled === 'true') toggleSwitcher();
+      if (autoSwitchEnabled === 'true') {
+        toggleSwitcher();
+      }
 
-      // Early fetch to get PEOPLE_MAP first, then re-populate selector
-      fetch(PEOPLE_URL).then(r => r.ok ? r.text() : '').then(t => { if (t){ parseCSV(t).forEach(p => PEOPLE_MAP[p.id]=p.name); } populatePersonSelector(); renderDashboardTitle(); }).finally(()=>{
-        $('#toggleTheme').addEventListener('click', toggleTheme);
-        $('#fullscreen-button').addEventListener('click', enterFullscreen);
-        $('#person-select').addEventListener('change', (e) => setPerson(e.target.value));
-        $('#lang-select').addEventListener('change', (e) => setLanguage(e.target.value));
-        $('#toggle-auto').addEventListener('click', toggleSwitcher);
-        applyTranslations(CURRENT_LANG);
-        setInterval(fetchDashboardData, REFRESH_MS);
-      });
+      populatePersonSelector();
+
+      $('#toggleTheme').addEventListener('click', toggleTheme);
+      $('#fullscreen-button').addEventListener('click', enterFullscreen);
+      $('#person-select').addEventListener('change', (e) => setPerson(e.target.value));
+      $('#lang-select').addEventListener('change', (e) => setLanguage(e.target.value));
+      $('#toggle-auto').addEventListener('click', toggleSwitcher);
+
+      applyTranslations(CURRENT_LANG);
+      setInterval(fetchDashboardData, REFRESH_MS);
     });
   </script>
 </body>
