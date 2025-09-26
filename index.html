@@ -1,793 +1,703 @@
 <!DOCTYPE html>
 <html lang="ko" class="h-full">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>금융 대시보드</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>금융 대시보드</title>
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          boxShadow: {
-            soft: '0 10px 30px rgba(0,0,0,0.06)'
-          }
-        }
-      },
-      darkMode: 'class'
-    }
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          boxShadow: {
+            soft: '0 10px 30px rgba(0,0,0,0.06)'
+          }
+        }
+      },
+      darkMode: 'class'
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <style>
-    body { font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif; }
-    .card-details { transition: max-height .3s ease, opacity .3s ease; max-height: 0; overflow: hidden; opacity: 0; }
-    .card-details.visible { max-height: 260px; opacity: 1; }
-    .skeleton { background: linear-gradient(90deg, rgba(0,0,0,0.06), rgba(0,0,0,0.12), rgba(0,0,0,0.06)); background-size: 200% 100%; animation: shimmer 1.2s infinite; }
-    @keyframes shimmer { from { background-position: 200% 0;} to { background-position: -200% 0;} }
-    @media (min-width: 1024px) { .main-container { min-height: 100vh; } }
-  </style>
+  <style>
+    body { font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif; }
+    .card-details { transition: max-height .3s ease, opacity .3s ease; max-height: 0; overflow: hidden; opacity: 0; }
+    .card-details.visible { max-height: 260px; opacity: 1; }
+    .skeleton { background: linear-gradient(90deg, rgba(0,0,0,0.06), rgba(0,0,0,0.12), rgba(0,0,0,0.06)); background-size: 200% 100%; animation: shimmer 1.2s infinite; }
+    @keyframes shimmer { from { background-position: 200% 0;} to { background-position: -200% 0;} }
+    @media (min-width: 1024px) { .main-container { min-height: 100vh; } }
+  </style>
 </head>
 <body class="h-full bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100">
-  <div class="main-container mx-auto max-w-7xl p-4 sm:p-6 lg:p-10">
-    <div class="flex items-center gap-3 mb-6">
-      <div class="flex items-center gap-3">
-        <div id="person-icon" class="w-11 h-11 rounded-2xl bg-indigo-600 text-white grid place-items-center shadow-soft"></div>
-        <div>
-          <h1 id="dashboard-title" class="text-2xl sm:text-3xl font-extrabold" data-i18n="dashboardTitle"></h1>
-          <p id="last-updated" class="text-xs text-slate-500 dark:text-slate-400" data-i18n="lastUpdated"></p>
-        </div>
-      </div>
-      <div class="ml-auto flex items-center gap-2">
-        <select id="person-select" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft"></select>
-        <select id="lang-select" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft">
-          <option value="ko">한</option>
-          <option value="en">E</option>
-        </select>
-        <button id="toggleTheme" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" title="라이트/다크 전환">🌗</button>
-        <button id="fullscreen-button" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" title="전체 화면">⛶</button>
-        <button id="toggle-auto" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" title="자동 전환">▶️</button>
-      </div>
-    </div>
+  <div class="main-container mx-auto max-w-7xl p-4 sm:p-6 lg:p-10">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="flex items-center gap-3">
+        <div id="person-icon" class="w-11 h-11 rounded-2xl bg-indigo-600 text-white grid place-items-center shadow-soft"></div>
+        <div>
+          <h1 id="dashboard-title" class="text-2xl sm:text-3xl font-extrabold" data-i18n="dashboardTitle"></h1>
+          <p id="last-updated" class="text-xs text-slate-500 dark:text-slate-400" data-i18n="lastUpdated"></p>
+        </div>
+      </div>
+      <div class="ml-auto flex items-center gap-2">
+        <select id="person-select" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft"></select>
+        <select id="lang-select" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft">
+          <option value="ko">한</option>
+          <option value="en">E</option>
+        </select>
+        <button id="toggleTheme" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" title="라이트/다크 전환">🌗</button>
+        <button id="fullscreen-button" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" title="전체 화면">⛶</button>
+        <button id="toggle-auto" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" title="자동 전환">▶️</button>
+      </div>
+    </div>
 
-    <div id="status-banner" class="hidden mb-4 rounded-2xl border px-4 py-3 text-sm"></div>
+    <div id="status-banner" class="hidden mb-4 rounded-2xl border px-4 py-3 text-sm"></div>
 
-    <section class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-      <div class="kpi bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800">
-        <div class="text-sm text-slate-500 dark:text-slate-400" data-i18n="kpiTotalLabel"></div>
-        <div id="kpi-total" class="text-3xl font-extrabold mt-1 tracking-tight">₩0</div>
-        <div id="kpi-total-mm" class="text-xs text-slate-500 mt-1">₩0.00 MM</div>
-      </div>
-      <div class="kpi bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800">
-        <div class="text-sm text-slate-500 dark:text-slate-400" data-i18n="kpiProfitLossLabel"></div>
-        <div id="kpi-pl" class="text-3xl font-extrabold mt-1 tracking-tight">₩0</div>
-        <div id="kpi-pl-rate" class="text-xs mt-1">—</div>
-      </div>
-      <div class="kpi bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800">
-        <div class="text-sm text-slate-500 dark:text-slate-400" data-i18n="kpiCashLabel"></div>
-        <div id="kpi-cash" class="text-3xl font-extrabold mt-1 tracking-tight">₩0</div>
-        <div class="text-xs text-slate-500 mt-1" data-i18n="kpiCashSubLabel"></div>
-      </div>
-      <div class="kpi bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800">
-        <div class="text-sm text-slate-500 dark:text-slate-400" data-i18n="kpiCountLabel"></div>
-        <div id="kpi-count" class="text-3xl font-extrabold mt-1 tracking-tight">0</div>
-        <div class="text-xs text-slate-500 mt-1" data-i18n="kpiCountSubLabel"></div>
-      </div>
-    </section>
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="kpi bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800">
+        <div class="text-sm text-slate-500 dark:text-slate-400" data-i18n="kpiTotalLabel"></div>
+        <div id="kpi-total" class="text-3xl font-extrabold mt-1 tracking-tight">₩0</div>
+        <div id="kpi-total-mm" class="text-xs text-slate-500 mt-1">₩0.00 MM</div>
+      </div>
+      <div class="kpi bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800">
+        <div class="text-sm text-slate-500 dark:text-slate-400" data-i18n="kpiProfitLossLabel"></div>
+        <div id="kpi-pl" class="text-3xl font-extrabold mt-1 tracking-tight">₩0</div>
+        <div id="kpi-pl-rate" class="text-xs mt-1">—</div>
+      </div>
+      <div class="kpi bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800">
+        <div class="text-sm text-slate-500 dark:text-slate-400" data-i18n="kpiCashLabel"></div>
+        <div id="kpi-cash" class="text-3xl font-extrabold mt-1 tracking-tight">₩0</div>
+        <div class="text-xs text-slate-500 mt-1" data-i18n="kpiCashSubLabel"></div>
+      </div>
+      <div class="kpi bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800">
+        <div class="text-sm text-slate-500 dark:text-slate-400" data-i18n="kpiCountLabel"></div>
+        <div id="kpi-count" class="text-3xl font-extrabold mt-1 tracking-tight">0</div>
+        <div class="text-xs text-slate-500 mt-1" data-i18n="kpiCountSubLabel"></div>
+      </div>
+    </section>
 
-    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-      <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-soft border border-slate-100 dark:border-slate-800">
-        <h2 class="text-lg font-bold mb-4" data-i18n="assetAllocationTitle"></h2>
-        <div class="h-[320px]"><canvas id="donut"></canvas></div>
-        </div>
-      <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-soft border border-slate-100 dark:border-slate-800">
-        <h2 class="text-lg font-bold mb-4" data-i18n="profitLossByAssetTitle"></h2>
-        <div class="h-[320px]"><canvas id="bars"></canvas></div>
-      </div>
-      <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-soft border border-slate-100 dark:border-slate-800">
-        <div class="flex items-center gap-2 mb-4">
-          <h2 class="text-lg font-bold" data-i18n="portfolioTrendTitle"></h2>
-          <span id="timeline-badge" class="ml-2 text-[10px] px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700 text-slate-500"></span>
-        </div>
-        <div class="h-[320px]"><canvas id="line"></canvas></div>
-      </div>
-    </section>
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-soft border border-slate-100 dark:border-slate-800">
+        <h2 class="text-lg font-bold mb-4" data-i18n="assetAllocationTitle"></h2>
+        <div class="h-[320px]"><canvas id="donut"></canvas></div>
+      </div>
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-soft border border-slate-100 dark:border-slate-800">
+        <h2 class="text-lg font-bold mb-4" data-i18n="profitLossByAssetTitle"></h2>
+        <div class="h-[320px]"><canvas id="bars"></canvas></div>
+      </div>
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-soft border border-slate-100 dark:border-slate-800">
+        <div class="flex items-center gap-2 mb-4">
+          <h2 class="text-lg font-bold" data-i18n="portfolioTrendTitle"></h2>
+          <span id="timeline-badge" class="ml-2 text-[10px] px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700 text-slate-500"></span>
+        </div>
+        <div class="h-[320px]"><canvas id="line"></canvas></div>
+      </div>
+    </section>
 
-    <section class="mb-10">
-      <div class="flex items-end justify-between mb-3">
-        <h2 class="text-xl font-extrabold" data-i18n="holdingsTitle"></h2>
-        <div class="text-xs text-slate-500" data-i18n="holdingsSubtitle"></div>
-      </div>
-      <div id="holdings" class="grid grid-cols-1 md:grid-cols-2 gap-5"></div>
-    </section>
+    <section class="mb-10">
+      <div class="flex items-end justify-between mb-3">
+        <h2 class="text-xl font-extrabold" data-i18n="holdingsTitle"></h2>
+        <div class="text-xs text-slate-500" data-i18n="holdingsSubtitle"></div>
+      </div>
+      <div id="holdings" class="grid grid-cols-1 md:grid-cols-2 gap-5"></div>
+    </section>
 
-    <section id="cash-holdings-section" class="mb-10">
-        <div class="flex items-end justify-between mb-3">
-            <h2 class="text-xl font-extrabold" data-i18n="cashHoldingsTitle"></h2>
-        </div>
-        <div id="cash-holdings" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
-    </section>
+    <section id="cash-holdings-section" class="mb-10">
+        <div class="flex items-end justify-between mb-3">
+            <h2 class="text-xl font-extrabold" data-i18n="cashHoldingsTitle"></h2>
+        </div>
+        <div id="cash-holdings" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+    </section>
 
-    <footer class="text-center text-xs text-slate-500 pb-8 opacity-80" data-i18n="footer"></footer>
-  </div>
+    <footer class="text-center text-xs text-slate-500 pb-8 opacity-80" data-i18n="footer"></footer>
+  </div>
 
-  <script>
-    // ===================== CONFIG =====================
-    const POSITIONS_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/holdings/positions.csv";
-    const ASSETS_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/reference/assets.csv";
-    const PRICES_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/prices/prices_daily.csv";
-    const PEOPLE_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/reference/people.csv";
+  <script>
+    // ===================== CONFIG =====================
+    const POSITIONS_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/holdings/positions.csv";
+    const ASSETS_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/reference/assets.csv";
+    const PRICES_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/prices/prices_daily.csv";
+    const PEOPLE_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/reference/people.csv";
+    // NEW: optional FX table (simple: currency,krw_rate)
+    const FX_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/reference/fx_rates.csv"; // currency,krw_rate
 
-    const REFRESH_MS = 5 * 60 * 1000;
-    const PEOPLE_MAP = {};
-    const PEOPLE_IDS = ['minchae', 'yeonu'];
-    let TARGET_PERSON = 'minchae';
-    let CURRENT_LANG = 'ko';
-    let switcherInterval = null;
+    const REFRESH_MS = 5 * 60 * 1000;
+    const PEOPLE_MAP = {};
+    const PEOPLE_IDS = ['minchae', 'yeonu'];
+    let TARGET_PERSON = 'minchae';
+    let CURRENT_LANG = 'ko';
+    let switcherInterval = null;
 
-    // Global data stores
-    let investments = [];
-    let cashByCurrency = {};
-    const MM_THRESHOLD = 1000000; // 1 million
+    // Global data stores
+    let investments = [];
+    let cashByCurrency = {};
+    let fxKRW = { KRW: 1 }; // currency-> KRW rate
+    const MM_THRESHOLD = 1_000_000; // 1 million
 
-    // Currency symbols map
-    const CURRENCY_SYMBOLS = {
-      'KRW': '₩',
-      'USD': '$',
-      'EUR': '€',
-      'JPY': '¥',
-      'CNY': '¥'
-    };
+    // Currency symbols map
+    const CURRENCY_SYMBOLS = { 'KRW': '₩', 'USD': '$', 'EUR': '€', 'JPY': '¥', 'CNY': '¥' };
 
-    const TRANSLATIONS = {
-      ko: {
-        dashboardTitle: "의 투자 대시보드",
-        lastUpdated: "최근 업데이트: —",
-        toggleTheme: "라이트/다크 전환",
-        fullScreen: "전체 화면",
-        autoOn: "▶️",
-        autoOff: "⏸️",
-        minchae: "민채",
-        yeonu: "Yeonu",
-        kpiTotalLabel: "총 평가액",
-        kpiProfitLossLabel: "총 손익",
-        kpiCashLabel: "총 현금",
-        kpiCashSubLabel: "안전 자산",
-        kpiCountLabel: "보유 자산 수",
-        kpiCountSubLabel: "펀드 + 현금",
-        assetAllocationTitle: "자산 배분",
-        profitLossByAssetTitle: "자산별 손익",
-        portfolioTrendTitle: "포트폴리오 추이",
-        holdingsTitle: "보유 자산",
-        holdingsSubtitle: "카드를 탭하면 상세가 펼쳐집니다",
-        cashHoldingsTitle: "현금 보유",
-        footer: "© for 민채 · GitHub Pages & Google Sheets 연동",
-        fetchError: "오류: 데이터 파일을 불러오지 못했습니다. — 파일을 확인하세요.",
-        fetching: "데이터를 불러오는 중입니다…",
-        price: "현재가",
-        quantity: "수량",
-        cost: "평단가",
-        currentValue: "현재 평가액",
-        profitLoss: "현재 손익",
-        rateOfReturn: "수익률",
-        fundCode: "코드",
-        noDateData: "날짜 데이터 탐지 안 됨",
-        total: "총계"
-      },
-      en: {
-        dashboardTitle: "'s Investment Dashboard",
-        lastUpdated: "Last Updated: —",
-        toggleTheme: "Toggle Theme",
-        fullScreen: "Full Screen",
-        autoOn: "▶️",
-        autoOff: "⏸️",
-        minchae: "Minchae",
-        yeonu: "Yeonu",
-        kpiTotalLabel: "Total Valuation",
-        kpiProfitLossLabel: "Total P/L",
-        kpiCashLabel: "Total Cash",
-        kpiCashSubLabel: "Safe Assets",
-        kpiCountLabel: "Total Holdings",
-        kpiCountSubLabel: "Funds + Cash",
-        assetAllocationTitle: "Asset Allocation",
-        profitLossByAssetTitle: "P/L by Asset",
-        portfolioTrendTitle: "Portfolio Trend",
-        holdingsTitle: "Holdings",
-        holdingsSubtitle: "Tap card for details",
-        cashHoldingsTitle: "Cash Holdings",
-        footer: "© for Minchae · GitHub Pages & Google Sheets Integration",
-        fetchError: "Error: Failed to load one or more data files. — Check your files.",
-        fetching: "Fetching data…",
-        price: "Current Price",
-        quantity: "Quantity",
-        cost: "Cost per Unit",
-        currentValue: "Current Value",
-        profitLoss: "Current P/L",
-        rateOfReturn: "Return Rate",
-        fundCode: "Code",
-        noDateData: "No Date Data Detected",
-        total: "Total"
-      }
-    };
+    const TRANSLATIONS = {
+      ko: {
+        dashboardTitle: "의 투자 대시보드",
+        lastUpdated: "최근 업데이트: —",
+        toggleTheme: "라이트/다크 전환",
+        fullScreen: "전체 화면",
+        autoOn: "▶️",
+        autoOff: "⏸️",
+        minchae: "민채",
+        yeonu: "연우",
+        kpiTotalLabel: "총 평가액 (KRW)",
+        kpiProfitLossLabel: "총 손익 (KRW)",
+        kpiCashLabel: "총 현금",
+        kpiCashSubLabel: "안전 자산",
+        kpiCountLabel: "보유 자산 수",
+        kpiCountSubLabel: "펀드 + 현금",
+        assetAllocationTitle: "자산 배분 (KRW 환산)",
+        profitLossByAssetTitle: "자산별 손익 (KRW)",
+        portfolioTrendTitle: "포트폴리오 추이 (KRW)",
+        holdingsTitle: "보유 자산",
+        holdingsSubtitle: "카드를 탭하면 상세가 펼쳐집니다",
+        cashHoldingsTitle: "현금 보유",
+        footer: "© for 민채 · GitHub Pages & Google Sheets 연동",
+        fetchError: "오류: 데이터 파일을 불러오지 못했습니다. — 파일을 확인하세요.",
+        fetching: "데이터를 불러오는 중입니다…",
+        price: "현재가",
+        quantity: "수량",
+        cost: "평단가",
+        currentValue: "현재 평가액",
+        profitLoss: "현재 손익",
+        rateOfReturn: "수익률",
+        fundCode: "코드",
+        noDateData: "날짜 데이터 탐지 안 됨",
+        total: "총계"
+      },
+      en: {
+        dashboardTitle: "'s Investment Dashboard",
+        lastUpdated: "Last Updated: —",
+        toggleTheme: "Toggle Theme",
+        fullScreen: "Full Screen",
+        autoOn: "▶️",
+        autoOff: "⏸️",
+        minchae: "Minchae",
+        yeonu: "Yeonu",
+        kpiTotalLabel: "Total Valuation (KRW)",
+        kpiProfitLossLabel: "Total P/L (KRW)",
+        kpiCashLabel: "Total Cash",
+        kpiCashSubLabel: "Safe Assets",
+        kpiCountLabel: "Total Holdings",
+        kpiCountSubLabel: "Funds + Cash",
+        assetAllocationTitle: "Asset Allocation (KRW)",
+        profitLossByAssetTitle: "P/L by Asset (KRW)",
+        portfolioTrendTitle: "Portfolio Trend (KRW)",
+        holdingsTitle: "Holdings",
+        holdingsSubtitle: "Tap card for details",
+        cashHoldingsTitle: "Cash Holdings",
+        footer: "© for Minchae · GitHub Pages & Google Sheets Integration",
+        fetchError: "Error: Failed to load one or more data files. — Check your files.",
+        fetching: "Fetching data…",
+        price: "Current Price",
+        quantity: "Quantity",
+        cost: "Cost per Unit",
+        currentValue: "Current Value",
+        profitLoss: "Current P/L",
+        rateOfReturn: "Return Rate",
+        fundCode: "Code",
+        noDateData: "No Date Data Detected",
+        total: "Total"
+      }
+    };
 
-    // ===================== HELPERS =====================
-    const $ = (sel) => document.querySelector(sel);
-    const $$ = (sel) => document.querySelectorAll(sel);
-    const SAFE_CSV_SPLIT = /,(?=(?:[^"]*"[^"]*")*[^"]*$)/;
+    // ===================== HELPERS =====================
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => document.querySelectorAll(sel);
+    const SAFE_CSV_SPLIT = /,(?=(?:[^"]*"[^"]*")*[^"]*$)/;
 
-    const nf = new Intl.NumberFormat('ko-KR');
-    const nfc = new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    
-    function formatCurrency(n, currency) {
-      const symbol = CURRENCY_SYMBOLS[currency] || currency;
-      return `${symbol}${nf.format(Math.round(n || 0))}`;
-    }
+    const nf = new Intl.NumberFormat('ko-KR');
+    const nfc = new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    function toMM(n, currency) {
-      const symbol = CURRENCY_SYMBOLS[currency] || currency;
-      const formatted = nfc.format((n || 0) / 1_000_000);
-      return `${symbol}${formatted} MM`;
-    }
+    function formatCurrency(n, currency) {
+      const symbol = CURRENCY_SYMBOLS[currency] || currency;
+      return `${symbol}${nf.format(Math.round(n || 0))}`;
+    }
 
-    function formatMMOrExact(n, currency) {
-      if (Math.abs(n) < MM_THRESHOLD) {
-        return formatCurrency(n, currency);
-      } else {
-        return toMM(n, currency);
-      }
-    }
+    function toMM(n, currency) {
+      const symbol = CURRENCY_SYMBOLS[currency] || currency;
+      const formatted = nfc.format((n || 0) / 1_000_000);
+      return `${symbol}${formatted} MM`;
+    }
 
-    function showBanner(msg, tone='info') {
-      const el = $('#status-banner');
-      el.textContent = msg;
-      el.className = `mb-4 rounded-2xl border px-4 py-3 text-sm`;
-      el.classList.add('hidden');
-      el.classList.toggle('border-amber-200', tone==='info');
-      el.classList.toggle('bg-amber-50', tone==='info');
-      el.classList.toggle('text-amber-800', tone==='info');
-      el.classList.toggle('border-red-200', tone==='error');
-      el.classList.toggle('bg-red-50', tone==='error');
-      el.classList.toggle('text-red-700', tone==='error');
-      el.classList.remove('hidden');
-    }
+    function formatMMOrExact(n, currency) {
+      if (Math.abs(n) < MM_THRESHOLD) return formatCurrency(n, currency);
+      return toMM(n, currency);
+    }
 
-    function hideBanner(){ $('#status-banner').classList.add('hidden'); }
-    function setLastUpdated(){ $('#last-updated').textContent = `${TRANSLATIONS[CURRENT_LANG].lastUpdated.split(':')[0]}: ${new Date().toLocaleString(CURRENT_LANG === 'ko' ? 'ko-KR' : 'en-US')}`; }
+    function showBanner(msg, tone='info') {
+      const el = $('#status-banner');
+      el.textContent = msg;
+      el.className = `mb-4 rounded-2xl border px-4 py-3 text-sm`;
+      el.classList.add('hidden');
+      el.classList.toggle('border-amber-200', tone==='info');
+      el.classList.toggle('bg-amber-50', tone==='info');
+      el.classList.toggle('text-amber-800', tone==='info');
+      el.classList.toggle('border-red-200', tone==='error');
+      el.classList.toggle('bg-red-50', tone==='error');
+      el.classList.toggle('text-red-700', tone==='error');
+      el.classList.remove('hidden');
+    }
 
-    function parseCSV(text) {
-        const rows = text.trim().split(/\r?\n/);
-        const headers = rows[0].split(SAFE_CSV_SPLIT).map(h => h.trim().replace(/"/g, ''));
-        const data = [];
-        for (let i = 1; i < rows.length; i++) {
-            const values = rows[i].split(SAFE_CSV_SPLIT).map(v => v.trim().replace(/"/g, ''));
-            const row = {};
-            headers.forEach((h, idx) => {
-                row[h] = values[idx];
-            });
-            data.push(row);
-        }
-        return data;
-    }
+    function hideBanner(){ $('#status-banner').classList.add('hidden'); }
+    function setLastUpdated(){ $('#last-updated').textContent = `${TRANSLATIONS[CURRENT_LANG].lastUpdated.split(':')[0]}: ${new Date().toLocaleString(CURRENT_LANG === 'ko' ? 'ko-KR' : 'en-US')}`; }
 
-    function applyTranslations(lang) {
-      $$('[data-i18n]').forEach(el => {
-        const key = el.getAttribute('data-i18n');
-        let text = TRANSLATIONS[lang][key];
-        if (el.tagName === 'INPUT' || el.tagName === 'SELECT') {
-          el.options.forEach(option => {
-            if (option.value === el.value) {
-              option.textContent = text;
-            }
-          });
-        } else if (el.tagName === 'OPTION') {
-          el.textContent = text;
-        } else {
-          el.textContent = text;
-        }
-      });
-      // Handle the dynamic title and button text
-      renderDashboardTitle();
-      const autoButton = $('#toggle-auto');
-      autoButton.textContent = switcherInterval ? TRANSLATIONS[CURRENT_LANG].autoOff : TRANSLATIONS[CURRENT_LANG].autoOn;
-      
-      // Re-render everything with new language strings
-      fetchDashboardData();
-    }
-    
-    // ===================== FETCH & PARSE =====================
-    async function fetchDashboardData() {
-        showBanner(TRANSLATIONS[CURRENT_LANG].fetching, 'info');
-        try {
-            const [positionsRes, assetsRes, pricesRes, peopleRes] = await Promise.all([
-              fetch(POSITIONS_URL + `?t=${Date.now()}`),
-              fetch(ASSETS_URL + `?t=${Date.now()}`),
-              fetch(PRICES_URL + `?t=${Date.now()}`),
-              fetch(PEOPLE_URL + `?t=${Date.now()}`),
-            ]);
-            
-            if (!positionsRes.ok || !assetsRes.ok || !pricesRes.ok) {
-                throw new Error(TRANSLATIONS[CURRENT_LANG].fetchError);
-            }
-            if (peopleRes.ok) {
-                const peopleData = parseCSV(await peopleRes.text());
-                peopleData.forEach(p => PEOPLE_MAP[p.id] = p.name);
-            }
+    function parseCSV(text) {
+      const rows = text.trim().split(/\r?\n/);
+      const headers = rows[0].split(SAFE_CSV_SPLIT).map(h => h.trim().replace(/"/g, ''));
+      const data = [];
+      for (let i = 1; i < rows.length; i++) {
+        if (!rows[i].trim()) continue;
+        const values = rows[i].split(SAFE_CSV_SPLIT).map(v => v.trim().replace(/"/g, ''));
+        const row = {};
+        headers.forEach((h, idx) => row[h] = values[idx]);
+        data.push(row);
+      }
+      return data;
+    }
 
-            const positionsText = await positionsRes.text();
-            const assetsText = await assetsRes.text();
-            const pricesText = await pricesRes.text();
+    function applyTranslations(lang) {
+      $$('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        const text = TRANSLATIONS[lang][key];
+        if (text !== undefined) el.textContent = text;
+      });
+      renderDashboardTitle();
+      $('#toggle-auto').textContent = switcherInterval ? TRANSLATIONS[CURRENT_LANG].autoOff : TRANSLATIONS[CURRENT_LANG].autoOn;
+      fetchDashboardData();
+    }
 
-            const positionsData = parseCSV(positionsText);
-            const assetsData = parseCSV(assetsText);
-            const pricesData = parseCSV(pricesText);
+    function toKRW(amount, currency){
+      const r = fxKRW[currency];
+      if (r === undefined) return NaN; // signal missing rate
+      return amount * r;
+    }
 
-            const personPositions = positionsData.filter(pos => pos.person_id === TARGET_PERSON);
-            
-            const assetMap = new Map();
-            assetsData.forEach(asset => {
-                assetMap.set(asset.asset_id, asset);
-            });
+    // ===================== FETCH & PARSE =====================
+    async function fetchDashboardData() {
+      showBanner(TRANSLATIONS[CURRENT_LANG].fetching, 'info');
+      try {
+        const [positionsRes, assetsRes, pricesRes, peopleRes, fxRes] = await Promise.all([
+          fetch(POSITIONS_URL + `?t=${Date.now()}`),
+          fetch(ASSETS_URL + `?t=${Date.now()}`),
+          fetch(PRICES_URL + `?t=${Date.now()}`),
+          fetch(PEOPLE_URL + `?t=${Date.now()}`),
+          fetch(FX_URL + `?t=${Date.now()}`).catch(() => ({ ok:false }))
+        ]);
 
-            const pricesMap = new Map();
-            pricesData.forEach(price => {
-                if (!pricesMap.has(price.asset_id)) {
-                    pricesMap.set(price.asset_id, []);
-                }
-                pricesMap.get(price.asset_id).push({ date: price.date, close: Number(price.close) });
-            });
+        if (peopleRes.ok) {
+          const peopleData = parseCSV(await peopleRes.text());
+          peopleData.forEach(p => PEOPLE_MAP[p.id] = p.name);
+        }
 
-            // Populate investments and cash holdings
-            investments = [];
-            cashByCurrency = {};
-            personPositions.forEach(pos => {
-                const assetRef = assetMap.get(pos.asset_id);
-                if (!assetRef) return;
+        if (!positionsRes.ok || !assetsRes.ok || !pricesRes.ok) throw new Error(TRANSLATIONS[CURRENT_LANG].fetchError);
 
-                if (assetRef.type === 'cash') {
-                    const currency = assetRef.currency;
-                    cashByCurrency[currency] = (cashByCurrency[currency] || 0) + Number(pos.qty);
-                } else {
-                    const latestPrice = (pricesMap.get(pos.asset_id) || []).slice(-1)[0]?.close || Number(assetRef.current_price);
-                    investments.push({
-                        name: assetRef.short_name,
-                        fund_cd: pos.asset_id,
-                        quantity: Number(pos.qty),
-                        purchasePrice: Number(pos.cost_per_unit),
-                        currentPrice: latestPrice,
-                        currency: assetRef.currency
-                    });
-                }
-            });
+        // FX (optional)
+        fxKRW = { KRW: 1 };
+        if (fxRes && fxRes.ok){
+          const fxRows = parseCSV(await fxRes.text());
+          fxRows.forEach(r => {
+            const c = (r.currency||'').trim();
+            const rate = Number(r.krw_rate);
+            if (c && !isNaN(rate) && rate>0) fxKRW[c] = rate;
+          });
+        }
 
-            const timeline = buildTimeline(personPositions, pricesMap);
-            
-            renderAll(timeline);
-            setLastUpdated();
-            hideBanner();
+        const positionsData = parseCSV(await positionsRes.text());
+        const assetsData = parseCSV(await assetsRes.text());
+        const pricesData = parseCSV(await pricesRes.text());
 
-        } catch (e) {
-            console.error(e);
-            showBanner(e.message, 'error');
-        }
-    }
+        const personPositions = positionsData.filter(pos => pos.person_id === TARGET_PERSON);
 
-    function buildTimeline(positions, pricesMap) {
-        const timeline = new Map();
-        const dates = new Set();
+        const assetMap = new Map();
+        assetsData.forEach(asset => assetMap.set(asset.asset_id, asset));
 
-        positions.forEach(pos => {
-            const assetPrices = pricesMap.get(pos.asset_id);
-            if (!assetPrices) return;
+        const pricesMap = new Map();
+        pricesData.forEach(price => {
+          if (!pricesMap.has(price.asset_id)) pricesMap.set(price.asset_id, []);
+          pricesMap.get(price.asset_id).push({ date: price.date, close: Number(price.close) });
+        });
+        // ensure sorted asc
+        for (const arr of pricesMap.values()) arr.sort((a,b)=>a.date.localeCompare(b.date));
 
-            assetPrices.forEach(price => dates.add(price.date));
-        });
+        // Populate investments and cash holdings
+        investments = [];
+        cashByCurrency = {};
+        personPositions.forEach(pos => {
+          const assetRef = assetMap.get(pos.asset_id);
+          if (!assetRef) return;
 
-        // [수정된 부분: YYYY-MM-DD -> YY-MM 포맷으로 변경]
-        const sortedDates = Array.from(dates)
-            .sort()
-            .map(date => {
-                if (date && date.length >= 10) {
-                    const year = date.substring(2, 4); // YY 추출
-                    const month = date.substring(5, 7); // MM 추출
-                    return `${year}-${month}`;
-                }
-                return date;
+          if (assetRef.type === 'cash') {
+            const currency = assetRef.currency || 'KRW';
+            cashByCurrency[currency] = (cashByCurrency[currency] || 0) + Number(pos.qty);
+          } else {
+            const latestPrice = (pricesMap.get(pos.asset_id) || []).slice(-1)[0]?.close || Number(assetRef.current_price);
+            investments.push({
+              name: assetRef.short_name,
+              fund_cd: pos.asset_id,
+              quantity: Number(pos.qty),
+              purchasePrice: Number(pos.cost_per_unit),
+              currentPrice: Number(latestPrice),
+              currency: assetRef.currency || 'KRW'
             });
-        // --------------------------------------------------------
+          }
+        });
 
-        sortedDates.forEach(date => {
-            let dailyValue = 0;
-            positions.forEach(pos => {
-                // Find the latest price for the asset up to this date
-                const pricesForAsset = pricesMap.get(pos.asset_id) || [];
-                // 참고: priceOnDate 필터링 로직은 여전히 'YYYY-MM-DD' 원본 날짜를 사용해야 함
-                const priceOnDate = pricesForAsset
-                    .filter(p => {
-                        // 날짜 비교를 위해 원본 날짜를 사용 (YYYY-MM-DD)
-                        const originalDate = p.date;
-                        const targetDatePart = date; // YY-MM
-                        return originalDate.startsWith(targetDatePart); // 해당 월의 모든 데이터를 포함하도록 단순화
-                    })
-                    .sort((a, b) => b.date.localeCompare(a.date))[0];
+        const timeline = buildTimeline(personPositions, pricesMap, assetMap);
 
-                if (priceOnDate) {
-                    dailyValue += Number(pos.qty) * priceOnDate.close;
-                } else if (pos.asset_id.startsWith('CASH')) {
-                    dailyValue += Number(pos.qty); // Add cash amount
-                }
-            });
-            timeline.set(date, dailyValue);
-        });
-     
-    return timeline;
-    }
+        renderAll(timeline);
+        setLastUpdated();
+        hideBanner();
+      } catch (e) {
+        console.error(e);
+        showBanner(e.message, 'error');
+      }
+    }
 
-    // ===================== RENDER =====================
-    let donutChart, barsChart, lineChart;
+    function buildTimeline(positions, pricesMap, assetMap) {
+      const timeline = new Map();
+      const dates = new Set();
 
-    function renderAll(timeline){
-      renderDashboardTitle();
-      renderKPIs();
-      renderCashHoldings();
-      renderHoldings();
-      renderDonut();
-      renderBars();
-      renderLine(timeline);
-    }
+      positions.forEach(pos => {
+        const asset = assetMap.get(pos.asset_id);
+        if (!asset) return;
+        if (asset.type === 'cash') {
+          // cash will be constant over time, but include at least one date marker if we have any prices for others
+          return; // handled separately as constant value later
+        }
+        const assetPrices = pricesMap.get(pos.asset_id);
+        if (!assetPrices) return;
+        assetPrices.forEach(price => dates.add(price.date));
+      });
 
-    function renderDashboardTitle(){
-      const personName = PEOPLE_MAP[TARGET_PERSON] || TARGET_PERSON;
-      $('#dashboard-title').textContent = `${personName}${TRANSLATIONS[CURRENT_LANG].dashboardTitle}`;
-      $('#person-icon').textContent = personName.charAt(0).toUpperCase();
-    }
+      const sortedDates = Array.from(dates).sort();
 
-    function calcTotals(){
-      let totalVal = 0;
-      let totalCost = 0;
-      let totalCash = 0;
-      for (const currency in cashByCurrency) {
-          totalCash += cashByCurrency[currency]; // We'll assume cash values are in KRW for total calculation for now
-      }
-      totalVal += totalCash;
-      totalCost += totalCash;
-      for (const inv of investments){
-        const curVal = (inv.currentPrice||0) * inv.quantity;
-        const cost = inv.purchasePrice * inv.quantity;
-        totalVal += curVal;
-        totalCost += cost;
-      }
-      return { totalVal, totalCost, totalPL: totalVal - totalCost, totalCash: totalCash };
-    }
+      sortedDates.forEach(date => {
+        let dailyValueKRW = 0;
+        // securities
+        positions.forEach(pos => {
+          const asset = assetMap.get(pos.asset_id);
+          if (!asset) return;
+          if (asset.type !== 'cash') {
+            const pricesForAsset = pricesMap.get(pos.asset_id) || [];
+            const priceOnDate = pricesForAsset.filter(p => p.date <= date).sort((a,b)=>b.date.localeCompare(a.date))[0];
+            if (priceOnDate) {
+              const cur = Number(pos.qty) * Number(priceOnDate.close);
+              const curKRW = toKRW(cur, asset.currency || 'KRW');
+              if (!isNaN(curKRW)) dailyValueKRW += curKRW;
+            }
+          }
+        });
+        // cash (assumed constant; convert to KRW at current fx)
+        for (const [ccy, amt] of Object.entries(cashByCurrency)){
+          const cKRW = toKRW(amt, ccy);
+          if (!isNaN(cKRW)) dailyValueKRW += cKRW;
+        }
+        timeline.set(date, dailyValueKRW);
+      });
 
-    function renderKPIs(){
-      const { totalVal, totalCost, totalPL, totalCash } = calcTotals();
-      $('#kpi-total').textContent = formatMMOrExact(totalVal, 'KRW');
-      $('#kpi-total-mm').textContent = formatCurrency(totalVal, 'KRW');
-      $('#kpi-cash').textContent = formatMMOrExact(totalCash, 'KRW');
-      $('#kpi-count').textContent = String(investments.length + Object.keys(cashByCurrency).length);
+      return timeline;
+    }
 
-      const rate = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
-      const plEl = $('#kpi-pl');
-      plEl.textContent = `${totalPL >= 0 ? '+' : ''}${formatMMOrExact(Math.abs(totalPL), 'KRW')}`;
-      const rateEl = $('#kpi-pl-rate');
-      rateEl.textContent = `${TRANSLATIONS[CURRENT_LANG].rateOfReturn} ${rate >= 0 ? '+' : ''}${nfc.format(rate)}%`;
-      plEl.classList.toggle('text-emerald-600', totalPL >= 0);
-      plEl.classList.toggle('text-rose-600', totalPL < 0);
-    }
+    // ===================== RENDER =====================
+    let donutChart, barsChart, lineChart;
 
-    function renderCashHoldings() {
-        const wrap = $('#cash-holdings');
-        wrap.innerHTML = '';
-        if (Object.keys(cashByCurrency).length === 0) {
-            $('#cash-holdings-section').style.display = 'none';
-        } else {
-            $('#cash-holdings-section').style.display = 'block';
-            for (const currency in cashByCurrency) {
-                const amount = cashByCurrency[currency];
-                const card = document.createElement('div');
-                card.className = 'bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 shadow-soft';
-                card.innerHTML = `
-                    <div class="text-sm text-slate-500 dark:text-slate-400">${TRANSLATIONS[CURRENT_LANG].kpiCashLabel} (${currency})</div>
-                    <div class="text-3xl font-extrabold mt-1 tracking-tight">${formatMMOrExact(amount, currency)}</div>
-                    <div class="text-xs text-slate-500 mt-1">${formatCurrency(amount, currency)}</div>
-                `;
-                wrap.appendChild(card);
-            }
-        }
-    }
+    function renderAll(timeline){
+      renderDashboardTitle();
+      renderKPIs();
+      renderCashHoldings();
+      renderHoldings();
+      renderDonut();
+      renderBars();
+      renderLine(timeline);
+    }
 
-    function renderHoldings(){
-      const wrap = $('#holdings');
-      wrap.innerHTML = '';
-      for (const inv of investments){
-        const curVal = inv.quantity * (inv.currentPrice||0);
-        const cost = inv.quantity * inv.purchasePrice;
-        const pl = curVal - cost;
-        const gain = pl >= 0;
-        const card = document.createElement('div');
-        card.className = 'bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 shadow-soft hover:shadow transition-all cursor-pointer';
-        card.innerHTML = `
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <h3 class="text-lg font-bold">${inv.name}</h3>
-              <div class="text-xs text-slate-500" data-i18n="fundCode">${TRANSLATIONS[CURRENT_LANG].fundCode}: ${inv.fund_cd}</div>
-            </div>
-            <div class="text-right">
-              <div class="text-sm text-slate-500" data-i18n="currentValue">${TRANSLATIONS[CURRENT_LANG].currentValue}</div>
-              <div class="text-xl font-extrabold">${formatMMOrExact(curVal, inv.currency)}</div>
-              <div class="text-xs text-slate-500">${formatCurrency(curVal, inv.currency)}</div>
-            </div>
-          </div>
-          <div class="card-details mt-4 text-sm">
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <div class="text-slate-500" data-i18n="quantity">${TRANSLATIONS[CURRENT_LANG].quantity}</div>
-                <div class="font-semibold">${nf.format(inv.quantity)}</div>
-              </div>
-              <div>
-                <div class="text-slate-500" data-i18n="cost">${TRANSLATIONS[CURRENT_LANG].cost}</div>
-                <div class="font-semibold">${formatCurrency(inv.purchasePrice, inv.currency)}</div>
-              </div>
-              <div>
-                <div class="text-slate-500" data-i18n="price">${TRANSLATIONS[CURRENT_LANG].price}</div>
-                <div class="font-semibold">${inv.currentPrice ? formatCurrency(inv.currentPrice, inv.currency) : '—'}</div>
-              </div>
-              <div>
-                <div class="text-slate-500" data-i18n="profitLoss">${TRANSLATIONS[CURRENT_LANG].profitLoss}</div>
-                <div class="font-semibold ${gain ? 'text-emerald-600' : 'text-rose-600'}">${gain ? '+' : ''}${formatCurrency(Math.abs(pl), inv.currency)}</div>
-              </div>
-            </div>
-          </div>
-        `;
-        card.addEventListener('click', () => card.querySelector('.card-details').classList.toggle('visible'));
-        wrap.appendChild(card);
-      }
-    }
+    function renderDashboardTitle(){
+      const personName = PEOPLE_MAP[TARGET_PERSON] || (TRANSLATIONS[CURRENT_LANG][TARGET_PERSON] || TARGET_PERSON);
+      $('#dashboard-title').textContent = `${personName}${TRANSLATIONS[CURRENT_LANG].dashboardTitle}`;
+      $('#person-icon').textContent = personName.charAt(0).toUpperCase();
+    }
 
-    function renderDonut(){
-      const cashTotal = Object.values(cashByCurrency).reduce((sum, val) => sum + val, 0);
-      const labels = [...investments.map(i => i.name), TRANSLATIONS[CURRENT_LANG].kpiCashLabel];
-      const data = [
-        ...investments.map(i => i.quantity * (i.currentPrice || 0)),
-        cashTotal
-      ];
-      if (donutChart) donutChart.destroy();
-      donutChart = new Chart($('#donut').getContext('2d'), {
-        type: 'doughnut',
-        data: { labels, datasets: [{ data }] },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatMMOrExact(ctx.parsed, 'KRW')}` } } }
-        }
-      });
-    }
+    function calcTotals(){
+      // Compute totals in KRW using FX; also compute native-cost P/L per investment (in its native ccy)
+      let totalValKRW = 0;
+      let totalCostKRW = 0;
+      let totalCashKRW = 0;
 
-    function renderBars(){
-      const labels = investments.map(i => i.name);
+      for (const [ccy, amt] of Object.entries(cashByCurrency)){
+        const k = toKRW(amt, ccy);
+        if (!isNaN(k)) totalCashKRW += k;
+      }
 
-      // Calculate the current value and initial cost for each investment
-      const currentValues = investments.map(i => i.quantity * (i.currentPrice || 0));
-      const initialCosts = investments.map(i => i.quantity * i.purchasePrice);
+      for (const inv of investments){
+        const curValNative = (inv.currentPrice||0) * inv.quantity;
+        const costNative = inv.purchasePrice * inv.quantity;
+        const curValKRW = toKRW(curValNative, inv.currency);
+        const costKRW = toKRW(costNative, inv.currency);
+        if (!isNaN(curValKRW)) totalValKRW += curValKRW; else totalValKRW += 0;
+        if (!isNaN(costKRW)) totalCostKRW += costKRW; else totalCostKRW += 0;
+      }
 
-      if (barsChart) barsChart.destroy();
-      barsChart = new Chart($('#bars').getContext('2d'), {
-        type: 'bar',
-        data: {
-          labels,
-          // Add a separate dataset for current value
-          datasets: [{
-            label: 'Current Value (MM)',
-            data: currentValues,
-            backgroundColor: 'rgba(79, 70, 229, 0.8)', // Example color
-            borderColor: 'rgba(79, 70, 229, 1)',
-            borderWidth: 1
-          },
-          // Add a second dataset for initial cost
-          {
-            label: 'Initial Cost (MM)',
-            data: initialCosts,
-            backgroundColor: 'rgba(107, 114, 128, 0.8)', // Example color for comparison
-            borderColor: 'rgba(107, 114, 128, 1)',
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                  callback: v => {
-                      // Bar Chart Y축은 이전 요청대로 ₩MM 포맷 유지
-                      const formatted = (v / 1_000_000).toFixed(0); 
-                      return `${CURRENCY_SYMBOLS['KRW']}${formatted} MM`;
-                  }
-              }
-            },
-            x: {
-              // This ensures bars for the same fund are grouped together
-              stacked: false
-            }
-          },
-          plugins: {
-            legend: { display: true }, // Show the legend to differentiate the datasets
-            tooltip: {
-              callbacks: {
-                label: c => {
-                    const formatted = (c.parsed.y / 1_000_000).toFixed(0);
-                    return ` ${c.dataset.label}: ${CURRENCY_SYMBOLS['KRW']}${formatted} MM`;
-                }
-              }
-            }
-          }
-        }
-      });
-    }
+      totalValKRW += totalCashKRW;
+      totalCostKRW += totalCashKRW; // treat cash cost = cash amount
+      return { totalValKRW, totalCostKRW, totalPLKRW: totalValKRW - totalCostKRW, totalCashKRW };
+    }
 
-    function renderLine(timeline){
-      const badge = $('#timeline-badge');
-      // buildTimeline에서 Map의 Key로 'YY-MM' 포맷이 저장됩니다.
-      const labels = Array.from(timeline.keys()); 
-      const data = Array.from(timeline.values());
-      
-      if (!timeline || timeline.size === 0 || labels.length === 0){
-        badge.textContent = TRANSLATIONS[CURRENT_LANG].noDateData;
-        if (lineChart) { lineChart.destroy(); lineChart = null; }
-        const ctx = $('#line').getContext('2d');
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        return;
-      }
+    function renderKPIs(){
+      const { totalValKRW, totalCostKRW, totalPLKRW, totalCashKRW } = calcTotals();
+      $('#kpi-total').textContent = formatMMOrExact(totalValKRW, 'KRW');
+      $('#kpi-total-mm').textContent = formatCurrency(totalValKRW, 'KRW');
+      $('#kpi-cash').textContent = formatMMOrExact(totalCashKRW, 'KRW');
+      $('#kpi-count').textContent = String(investments.length + Object.keys(cashByCurrency).length);
 
-      badge.textContent = `${labels[0]} ~ ${labels[labels.length - 1]}`;
+      const rate = totalCostKRW > 0 ? (totalPLKRW / totalCostKRW) * 100 : 0;
+      const plEl = $('#kpi-pl');
+      plEl.textContent = `${totalPLKRW >= 0 ? '+' : ''}${formatMMOrExact(Math.abs(totalPLKRW), 'KRW')}`;
+      const rateEl = $('#kpi-pl-rate');
+      rateEl.textContent = `${TRANSLATIONS[CURRENT_LANG].rateOfReturn} ${rate >= 0 ? '+' : ''}${nfc.format(rate)}%`;
+      plEl.classList.toggle('text-emerald-600', totalPLKRW >= 0);
+      plEl.classList.toggle('text-rose-600', totalPLKRW < 0);
+    }
 
-      if (lineChart) lineChart.destroy();
-      lineChart = new Chart($('#line').getContext('2d'), {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: 'Total Value (MM)',
-            data,
-            borderColor: 'rgb(79, 70, 229)',
-            backgroundColor: 'rgba(79, 70, 229, 0.1)',
-            tension: 0.3,
-            fill: true
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: false,
-              ticks: {
-                  callback: v => {
-                      // [수정된 부분: Y축 XX.X MM 포맷]
-                      const formatted = (v / 1_000_000).toFixed(1); // 소수점 첫째 자리까지 표시
-                      return `${CURRENCY_SYMBOLS['KRW']}${formatted} MM`;
-                  }
-              }
-            },
-            x: {
-                ticks: {
-                    // X축 포맷이 'YY-MM'으로 짧아져서 기본 설정을 유지합니다.
-                    autoSkip: true,
-                    maxRotation: 0,
-                    minRotation: 0
-                }
-            }
-          },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: c => {
-                    const formatted = (c.parsed.y / 1_000_000).toFixed(0);
-                    return ` ${CURRENCY_SYMBOLS['KRW']}${formatted} MM`;
-                }
-              }
-            }
-          }
-        }
-      });
-    }
+    function renderCashHoldings() {
+      const wrap = $('#cash-holdings');
+      wrap.innerHTML = '';
+      if (Object.keys(cashByCurrency).length === 0) {
+        $('#cash-holdings-section').style.display = 'none';
+      } else {
+        $('#cash-holdings-section').style.display = 'block';
+        for (const currency in cashByCurrency) {
+          const amount = cashByCurrency[currency];
+          const card = document.createElement('div');
+          card.className = 'bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 shadow-soft';
+          const amountKRW = toKRW(amount, currency);
+          card.innerHTML = `
+            <div class="text-sm text-slate-500 dark:text-slate-400">${TRANSLATIONS[CURRENT_LANG].kpiCashLabel} (${currency})</div>
+            <div class="text-3xl font-extrabold mt-1 tracking-tight">${formatMMOrExact(amount, currency)}</div>
+            <div class="text-xs text-slate-500 mt-1">${!isNaN(amountKRW) ? '≈ ' + formatMMOrExact(amountKRW, 'KRW') : 'FX —'}</div>
+          `;
+          wrap.appendChild(card);
+        }
+      }
+    }
 
-    // ===================== INTERACTION =====================
-    function setPerson(personId) {
-      TARGET_PERSON = personId;
-      localStorage.setItem('targetPerson', personId);
-      $('#person-select').value = personId; // Update the UI selector
-      fetchDashboardData();
-    }
-    
-    function setLanguage(lang) {
-      CURRENT_LANG = lang;
-      localStorage.setItem('dashboardLang', lang);
-      applyTranslations(lang);
-    }
+    function renderHoldings(){
+      const wrap = $('#holdings');
+      wrap.innerHTML = '';
+      for (const inv of investments){
+        const curVal = inv.quantity * (inv.currentPrice||0);
+        const cost = inv.quantity * inv.purchasePrice;
+        const pl = curVal - cost;
+        const gain = pl >= 0;
+        const curValKRW = toKRW(curVal, inv.currency);
+        const plKRW = !isNaN(curValKRW) ? curValKRW - toKRW(cost, inv.currency) : NaN;
+        const card = document.createElement('div');
+        card.className = 'bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 shadow-soft hover:shadow transition-all cursor-pointer';
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h3 class="text-lg font-bold">${inv.name}</h3>
+              <div class="text-xs text-slate-500" data-i18n="fundCode">${TRANSLATIONS[CURRENT_LANG].fundCode}: ${inv.fund_cd}</div>
+            </div>
+            <div class="text-right">
+              <div class="text-sm text-slate-500" data-i18n="currentValue">${TRANSLATIONS[CURRENT_LANG].currentValue}</div>
+              <div class="text-xl font-extrabold">${formatMMOrExact(curVal, inv.currency)}</div>
+              <div class="text-xs text-slate-500">${!isNaN(curValKRW) ? '≈ ' + formatMMOrExact(curValKRW, 'KRW') : 'FX —'}</div>
+            </div>
+          </div>
+          <div class="card-details mt-4 text-sm">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <div class="text-slate-500" data-i18n="quantity">${TRANSLATIONS[CURRENT_LANG].quantity}</div>
+                <div class="font-semibold">${nf.format(inv.quantity)}</div>
+              </div>
+              <div>
+                <div class="text-slate-500" data-i18n="cost">${TRANSLATIONS[CURRENT_LANG].cost}</div>
+                <div class="font-semibold">${formatCurrency(inv.purchasePrice, inv.currency)}</div>
+              </div>
+              <div>
+                <div class="text-slate-500" data-i18n="price">${TRANSLATIONS[CURRENT_LANG].price}</div>
+                <div class="font-semibold">${inv.currentPrice ? formatCurrency(inv.currentPrice, inv.currency) : '—'}</div>
+              </div>
+              <div>
+                <div class="text-slate-500" data-i18n="profitLoss">${TRANSLATIONS[CURRENT_LANG].profitLoss}</div>
+                <div class="font-semibold ${gain ? 'text-emerald-600' : 'text-rose-600'}">${gain ? '+' : ''}${formatCurrency(Math.abs(pl), inv.currency)} <span class="text-slate-400">(${!isNaN(plKRW) ? (plKRW>=0?'+':'')+formatCurrency(Math.abs(plKRW), 'KRW') : 'FX —'})</span></div>
+              </div>
+            </div>
+          </div>
+        `;
+        card.addEventListener('click', () => card.querySelector('.card-details').classList.toggle('visible'));
+        wrap.appendChild(card);
+      }
+    }
 
-    function enterFullscreen(){
-      const el = document.documentElement;
-      if (el.requestFullscreen) el.requestFullscreen();
-      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-      else if (el.msRequestFullscreen) el.msRequestFullscreen();
-    }
+    function renderDonut(){
+      // Convert all to KRW for allocation comparison
+      const labels = [...investments.map(i => i.name), TRANSLATIONS[CURRENT_LANG].kpiCashLabel];
+      const dataKRW = [
+        ...investments.map(i => toKRW(i.quantity * (i.currentPrice || 0), i.currency) || 0),
+        Object.entries(cashByCurrency).reduce((sum,[ccy,amt]) => sum + (toKRW(amt, ccy)||0), 0)
+      ];
+      if (donutChart) donutChart.destroy();
+      donutChart = new Chart($('#donut').getContext('2d'), {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data: dataKRW }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatMMOrExact(ctx.parsed, 'KRW')}` } } }
+        }
+      });
+    }
 
-    function applyStoredTheme(){
-      const stored = localStorage.getItem('theme-mode');
-      if (stored === 'dark') document.documentElement.classList.add('dark');
-    }
+    function renderBars(){
+      const labels = investments.map(i => i.name);
+      const currentValuesKRW = investments.map(i => toKRW(i.quantity * (i.currentPrice || 0), i.currency) || 0);
+      const initialCostsKRW = investments.map(i => toKRW(i.quantity * i.purchasePrice, i.currency) || 0);
 
-    function toggleTheme(){
-      const html = document.documentElement;
-      html.classList.toggle('dark');
-      localStorage.setItem('theme-mode', html.classList.contains('dark') ? 'dark' : 'light');
-    }
+      if (barsChart) barsChart.destroy();
+      barsChart = new Chart($('#bars').getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: CURRENT_LANG==='ko' ? '현재 평가액 (KRW)' : 'Current Value (KRW)', data: currentValuesKRW, borderWidth: 1 },
+            { label: CURRENT_LANG==='ko' ? '매입 원가 (KRW)' : 'Initial Cost (KRW)', data: initialCostsKRW, borderWidth: 1 }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, ticks: { callback: v => `${CURRENCY_SYMBOLS['KRW']}${(v/1_000_000).toFixed(0)} MM` } },
+            x: { stacked: false }
+          },
+          plugins: {
+            legend: { display: true },
+            tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${CURRENCY_SYMBOLS['KRW']}${(c.parsed.y/1_000_000).toFixed(0)} MM` } }
+          }
+        }
+      });
+    }
 
-    function toggleSwitcher() {
-        const button = $('#toggle-auto');
-        if (switcherInterval) {
-            clearInterval(switcherInterval);
-            switcherInterval = null;
-            button.textContent = TRANSLATIONS[CURRENT_LANG].autoOn;
-            localStorage.setItem('autoSwitchEnabled', 'false');
-        } else {
-            switcherInterval = setInterval(() => {
-                const currentIndex = PEOPLE_IDS.indexOf(TARGET_PERSON);
-                const nextIndex = (currentIndex + 1) % PEOPLE_IDS.length;
-                setPerson(PEOPLE_IDS[nextIndex]);
-            }, 15000); // 15 seconds
-            button.textContent = TRANSLATIONS[CURRENT_LANG].autoOff;
-            localStorage.setItem('autoSwitchEnabled', 'true');
-        }
-    }
+    function renderLine(timeline){
+      const badge = $('#timeline-badge');
+      if (!timeline || timeline.size === 0){
+        badge.textContent = TRANSLATIONS[CURRENT_LANG].noDateData;
+        if (lineChart) { lineChart.destroy(); lineChart = null; }
+        const ctx = $('#line').getContext('2d');
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        return;
+      }
 
-    function populatePersonSelector() {
-        const selector = $('#person-select');
-        selector.innerHTML = '';
-        for (const id of PEOPLE_IDS) {
-            const option = document.createElement('option');
-            option.value = id;
-            option.textContent = id.charAt(0).toUpperCase();
-            selector.appendChild(option);
-        }
-        selector.value = TARGET_PERSON;
-    }
+      const labels = Array.from(timeline.keys());
+      const data = Array.from(timeline.values());
+      badge.textContent = `${labels[0]} ~ ${labels[labels.length - 1]}`;
 
-    // ===================== INIT =====================
-    window.addEventListener('load', () => {
-      applyStoredTheme();
-      const storedPerson = localStorage.getItem('targetPerson');
-      if (storedPerson) {
-        TARGET_PERSON = storedPerson;
-      } else {
-        localStorage.setItem('targetPerson', TARGET_PERSON);
-      }
-      
-      const storedLang = localStorage.getItem('dashboardLang');
-      if (storedLang) {
-        CURRENT_LANG = storedLang;
-        $('#lang-select').value = storedLang;
-      } else {
-        localStorage.setItem('dashboardLang', CURRENT_LANG);
-      }
+      if (lineChart) lineChart.destroy();
+      lineChart = new Chart($('#line').getContext('2d'), {
+        type: 'line',
+        data: { labels, datasets: [{ label: CURRENT_LANG==='ko'? '총 평가액 (KRW)' : 'Total Value (KRW)', data, tension: 0.3, fill: true }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: false, ticks: { callback: v => `${CURRENCY_SYMBOLS['KRW']}${(v/1_000_000).toFixed(0)} MM` } },
+            x: { ticks: { autoSkip: true, maxRotation: 0, minRotation: 0 } }
+          },
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${CURRENCY_SYMBOLS['KRW']}${(c.parsed.y/1_000_000).toFixed(0)} MM` } } }
+        }
+      });
+    }
 
-      const autoSwitchEnabled = localStorage.getItem('autoSwitchEnabled');
-      if (autoSwitchEnabled === 'true') {
-        toggleSwitcher();
-      }
+    // ===================== INTERACTION =====================
+    function setPerson(personId) {
+      TARGET_PERSON = personId;
+      localStorage.setItem('targetPerson', personId);
+      $('#person-select').value = personId;
+      fetchDashboardData();
+    }
 
-      populatePersonSelector();
+    function setLanguage(lang) {
+      CURRENT_LANG = lang;
+      localStorage.setItem('dashboardLang', lang);
+      applyTranslations(lang);
+    }
 
-      $('#toggleTheme').addEventListener('click', toggleTheme);
-      $('#fullscreen-button').addEventListener('click', enterFullscreen);
-      $('#person-select').addEventListener('change', (e) => setPerson(e.target.value));
-      $('#lang-select').addEventListener('change', (e) => setLanguage(e.target.value));
-      $('#toggle-auto').addEventListener('click', toggleSwitcher);
-      // 데이터 초기 로드
-      fetchDashboardData(); 
-    });
-  </script>
+    function enterFullscreen(){
+      const el = document.documentElement;
+      if (el.requestFullscreen) el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      else if (el.msRequestFullscreen) el.msRequestFullscreen();
+    }
+
+    function applyStoredTheme(){
+      const stored = localStorage.getItem('theme-mode');
+      if (stored === 'dark') document.documentElement.classList.add('dark');
+    }
+
+    function toggleTheme(){
+      const html = document.documentElement;
+      html.classList.toggle('dark');
+      localStorage.setItem('theme-mode', html.classList.contains('dark') ? 'dark' : 'light');
+    }
+
+    function toggleSwitcher() {
+      const button = $('#toggle-auto');
+      if (switcherInterval) {
+        clearInterval(switcherInterval); switcherInterval = null;
+        button.textContent = TRANSLATIONS[CURRENT_LANG].autoOn;
+        localStorage.setItem('autoSwitchEnabled', 'false');
+      } else {
+        switcherInterval = setInterval(() => {
+          const currentIndex = PEOPLE_IDS.indexOf(TARGET_PERSON);
+          const nextIndex = (currentIndex + 1) % PEOPLE_IDS.length;
+          setPerson(PEOPLE_IDS[nextIndex]);
+        }, 15000);
+        button.textContent = TRANSLATIONS[CURRENT_LANG].autoOff;
+        localStorage.setItem('autoSwitchEnabled', 'true');
+      }
+    }
+
+    function populatePersonSelector() {
+      const selector = $('#person-select');
+      selector.innerHTML = '';
+      for (const id of PEOPLE_IDS) {
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = PEOPLE_MAP[id] || (TRANSLATIONS[CURRENT_LANG][id] || id.charAt(0).toUpperCase());
+        selector.appendChild(option);
+      }
+      selector.value = TARGET_PERSON;
+    }
+
+    // ===================== INIT =====================
+    window.addEventListener('load', () => {
+      applyStoredTheme();
+      const storedPerson = localStorage.getItem('targetPerson');
+      if (storedPerson) TARGET_PERSON = storedPerson; else localStorage.setItem('targetPerson', TARGET_PERSON);
+
+      const storedLang = localStorage.getItem('dashboardLang');
+      if (storedLang) { CURRENT_LANG = storedLang; $('#lang-select').value = storedLang; } else { localStorage.setItem('dashboardLang', CURRENT_LANG); }
+
+      const autoSwitchEnabled = localStorage.getItem('autoSwitchEnabled');
+      if (autoSwitchEnabled === 'true') toggleSwitcher();
+
+      // Early fetch to get PEOPLE_MAP first, then re-populate selector
+      fetch(PEOPLE_URL).then(r => r.ok ? r.text() : '').then(t => { if (t){ parseCSV(t).forEach(p => PEOPLE_MAP[p.id]=p.name); } populatePersonSelector(); renderDashboardTitle(); }).finally(()=>{
+        $('#toggleTheme').addEventListener('click', toggleTheme);
+        $('#fullscreen-button').addEventListener('click', enterFullscreen);
+        $('#person-select').addEventListener('change', (e) => setPerson(e.target.value));
+        $('#lang-select').addEventListener('change', (e) => setLanguage(e.target.value));
+        $('#toggle-auto').addEventListener('click', toggleSwitcher);
+        applyTranslations(CURRENT_LANG);
+        setInterval(fetchDashboardData, REFRESH_MS);
+      });
+    });
+  </script>
 </body>
 </html>
