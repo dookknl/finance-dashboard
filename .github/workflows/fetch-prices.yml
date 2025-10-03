@@ -5,7 +5,7 @@ permissions:
 
 on:
   schedule:
-    - cron: '15 21 * * *'  # 21:15 UTC (~00:15 Asia/Riyadh next day)
+    - cron: '0 10 * * *'  # 10:00 UTC = 19:00 Asia/Seoul (KST)
   workflow_dispatch: {}     # lets you run manually
 
 jobs:
