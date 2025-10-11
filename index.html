@@ -67,7 +67,7 @@
       <div class="kpi bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800">
         <div class="text-sm text-slate-500 dark:text-slate-400" data-i18n="kpiCashLabel"></div>
         <div id="kpi-cash" class="text-3xl font-extrabold mt-1 tracking-tight">₩0</div>
-        <div class="text-xs text-slate-500 mt-1" data-i18n="kpiCashSubLabel"></div>
+        <div id="kpi-cash-note" class="text-xs text-slate-500 mt-1"></div>
       </div>
       <div class="kpi bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800">
         <div class="text-sm text-slate-500 dark:text-slate-400" data-i18n="kpiCountLabel"></div>
@@ -437,29 +437,35 @@
       $('#person-icon').textContent = personName.charAt(0).toUpperCase();
     }
 
+    // === CHANGED: compute KRW-only cash for KPIs ===
     function calcTotals(){
       let totalVal = 0;
       let totalCost = 0;
-      let totalCash = 0;
-      for (const currency in cashByCurrency) {
-          totalCash += cashByCurrency[currency]; // (주의) 통화 혼합 시 총계는 단일화폐 환산 필요
-      }
-      totalVal += totalCash;
-      totalCost += totalCash;
+      const totalCashKRW = cashByCurrency['KRW'] ? Number(cashByCurrency['KRW']) : 0; // KRW only
+
+      // only KRW cash contributes to KPIs (per request)
+      totalVal += totalCashKRW;
+      totalCost += totalCashKRW;
+
       for (const inv of investments){
         const curVal = (inv.currentPrice||0) * inv.quantity;
         const cost = inv.purchasePrice * inv.quantity;
         totalVal += curVal;
         totalCost += cost;
       }
-      return { totalVal, totalCost, totalPL: totalVal - totalCost, totalCash: totalCash };
+      return { totalVal, totalCost, totalPL: totalVal - totalCost, totalCashKRW };
     }
 
     function renderKPIs(){
-      const { totalVal, totalCost, totalPL, totalCash } = calcTotals();
+      const { totalVal, totalCost, totalPL, totalCashKRW } = calcTotals();
       $('#kpi-total').textContent = formatMMOrExact(totalVal, 'KRW');
       $('#kpi-total-mm').textContent = formatCurrency(totalVal, 'KRW');
-      $('#kpi-cash').textContent = formatMMOrExact(totalCash, 'KRW');
+
+      // === CHANGED: Total Cash shows KRW-only ===
+      $('#kpi-cash').textContent = formatMMOrExact(totalCashKRW, 'KRW');
+      const cashNote = CURRENT_LANG === 'ko' ? '한화 기준 (₩만)' : 'KRW only';
+      $('#kpi-cash-note').textContent = cashNote;
+
       $('#kpi-count').textContent = String(investments.length + Object.keys(cashByCurrency).length);
 
       const rate = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
@@ -802,6 +808,3 @@
   </script>
 </body>
 </html>
-
-
- 
