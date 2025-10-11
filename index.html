@@ -291,7 +291,24 @@
       autoButton.textContent = switcherInterval ? TRANSLATIONS[CURRENT_LANG].autoOff : TRANSLATIONS[CURRENT_LANG].autoOn;
       fetchDashboardData();
     }
-    
+
+    // ---- Date helpers for dynamic X-axis ticks ----
+    const DAY_MS = 24*60*60*1000;
+    function parseISO(d){ const [y,m,dd] = d.split('-').map(Number); return new Date(y, m-1, dd); }
+    function diffDays(a, b){ return Math.round((parseISO(b) - parseISO(a)) / DAY_MS); }
+    function isMonthStart(d){ return parseISO(d).getDate() === 1; }
+    function isQuarterStart(d){
+      const dt = parseISO(d); const m = dt.getMonth()+1; // 1..12
+      return dt.getDate() === 1 && (m===1 || m===4 || m===7 || m===10);
+    }
+    function pickTickLevel(startISO, endISO){
+      const days = diffDays(startISO, endISO);
+      if (days <= 90)   return 'weekly';
+      if (days <= 180)  return 'biweekly';
+      if (days <= 540)  return 'monthly';
+      return 'quarterly';
+    }
+
     // ===================== FETCH & PARSE =====================
     async function fetchDashboardData() {
         showBanner(TRANSLATIONS[CURRENT_LANG].fetching, 'info');
@@ -541,7 +558,7 @@
       });
     }
 
-    // ---- 수정된 막대(bar) 차트: Y축/툴팁을 ₩XX.X MM 형식으로 ----
+    // ---- 막대(bar) 차트: Y축/툴팁을 ₩XX.X MM 형식으로 ----
     function renderBars(){
       const labels = investments.map(i => i.name);
       const currentValues = investments.map(i => i.quantity * (i.currentPrice || 0));
@@ -580,7 +597,7 @@
       });
     }
 
-    // ---- 수정된 라인(line) 차트: X축 YY-MM(전체 인덱스 보이기), Y축/툴팁 ₩XX.X MM ----
+    // ---- 라인(line) 차트: 기간에 따라 주/격주/월/분기 라벨 표시 ----
     function renderLine(timeline){
       const badge = $('#timeline-badge');
       if (!timeline || timeline.size === 0){
@@ -591,14 +608,50 @@
         return;
       }
 
-      const rawLabels = Array.from(timeline.keys());          // YYYY-MM-DD
+      // raw daily dates/values
+      const rawDates = Array.from(timeline.keys());     // 'YYYY-MM-DD'
       const data = Array.from(timeline.values());
-      const labels = rawLabels.map(d => {                     // YY-MM 로 표시
-        const [y, m] = d.split('-');
-        return `${y.slice(2)}-${m}`;
-      });
 
-      badge.textContent = `${rawLabels[0]} ~ ${rawLabels[rawLabels.length - 1]}`;
+      // decide tick density based on whole span
+      const startISO = rawDates[0];
+      const endISO   = rawDates[rawDates.length - 1];
+      const level = pickTickLevel(startISO, endISO);    // 'weekly'|'biweekly'|'monthly'|'quarterly'
+      badge.textContent = `${startISO} ~ ${endISO}`;
+
+      // formatting function for tick labels
+      const fmtLabel = (d) => {
+        const [y,m,dd] = d.split('-');
+        if (level === 'weekly' || level === 'biweekly') return `${y.slice(2)}-${m}-${dd}`;
+        if (level === 'monthly')   return `${y.slice(2)}-${m}`;
+        /* quarterly */            return `${y} Q${Math.floor((Number(m)-1)/3)+1}`;
+      };
+
+      // predicate: show or hide a tick at a given date
+      const showTick = (d) => {
+        switch(level){
+          case 'weekly': {
+            const dt = parseISO(d);
+            return dt.getDay() === 1; // Monday only
+          }
+          case 'biweekly': {
+            // 격주 월요일: 첫 번째 월요일 기준으로 2주 간격
+            const firstMonday = rawDates.find(dd => parseISO(dd).getDay() === 1);
+            if (!firstMonday) return false;
+            const dt = parseISO(d);
+            if (dt.getDay() !== 1) return false;
+            const weeks = Math.round(diffDays(firstMonday, d)/7);
+            return weeks % 2 === 0;
+          }
+          case 'monthly':
+            return isMonthStart(d);
+          case 'quarterly':
+            return isQuarterStart(d);
+          default:
+            return true;
+        }
+      };
+
+      const labels = rawDates;
 
       if (lineChart) lineChart.destroy();
       lineChart = new Chart($('#line').getContext('2d'), {
@@ -624,9 +677,13 @@
             },
             x: {
               ticks: {
-                autoSkip: false,   // 가능한 한 전체 인덱스(월) 보이기
+                autoSkip: false,   // 직접 필터링
                 maxRotation: 0,
-                minRotation: 0
+                minRotation: 0,
+                callback: function(value, index){
+                  const d = labels[index];
+                  return showTick(d) ? fmtLabel(d) : '';
+                }
               }
             }
           },
@@ -634,6 +691,10 @@
             legend: { display: false },
             tooltip: {
               callbacks: {
+                title: items => {
+                  const d = labels[items[0].dataIndex];
+                  return d; // YYYY-MM-DD
+                },
                 label: c => ` ${CURRENCY_SYMBOLS['KRW']}${(c.parsed.y/1_000_000).toFixed(1)} MM`
               }
             }
