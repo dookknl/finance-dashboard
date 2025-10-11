@@ -40,11 +40,8 @@
         </div>
       </div>
       <div class="ml-auto flex items-center gap-2">
-        <select id="person-select" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft"></select>
-        <select id="lang-select" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft">
-          <option value="ko">한</option>
-          <option value="en">E</option>
-        </select>
+        <button id="toggle-person" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" title="사람 전환">👤</button>
+        <button id="toggle-lang" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" title="언어 전환">🇰🇷/🇺🇸</button>
         <button id="toggleTheme" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" title="라이트/다크 전환">🌗</button>
         <button id="fullscreen-button" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" title="전체 화면">⛶</button>
         <button id="toggle-auto" class="px-3 py-2 rounded-xl text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 shadow-soft" title="자동 전환">▶️</button>
@@ -713,15 +710,25 @@
     function setPerson(personId) {
       TARGET_PERSON = personId;
       localStorage.setItem('targetPerson', personId);
-      $('#person-select').value = personId;
+      renderToggles();
       fetchDashboardData();
     }
     
     function setLanguage(lang) {
       CURRENT_LANG = lang;
       localStorage.setItem('dashboardLang', lang);
+      renderToggles();
       applyTranslations(lang);
     }
+
+    function toggleLanguage(){
+      setLanguage(CURRENT_LANG === 'ko' ? 'en' : 'ko');
+    }
+
+    function togglePerson(){
+      const currentIndex = PEOPLE_IDS.indexOf(TARGET_PERSON);
+      const nextIndex = (currentIndex + 1) % PEOPLE_IDS.length;
+      setPerson(PE
 
     function enterFullscreen(){
       const el = document.documentElement;
