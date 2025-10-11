@@ -1,7 +1,6 @@
-date,currency,krw_rate
-,KRW,1
-,USD,1380
-,EUR,1500
-,JPY,9.5
-,CNY,190
-
+date,base,quote,rate
+2025-10-11,USD,KRW,1380.0
+2025-10-11,EUR,KRW,1500.0
+2025-10-11,JPY,KRW,9.3
+2025-10-11,CNY,KRW,190.0
+2025-10-11,KRW,KRW,1.0
