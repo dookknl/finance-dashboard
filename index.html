@@ -3,17 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>금융 대시보드 (개선판)</title>
+  <title>금융 대시보드 (FX 환산 포함)</title>
 
   <!--
   변경 요약 (2025-10-11):
-  1) 혼합 통화 안전장치: 여러 통화 발견 시 총계/손익을 "—"로 표시하고 경고 배너 노출.
-  2) 인물 선택 표시 개선: people.csv의 이름(또는 번역 키)로 옵션 라벨 표시.
-  3) 타임라인 현금 반영: type=='cash' 자산을 전 날짜에 고정 값으로 반영.
-  4) CSV 파서 보강: 공백 라인/컬럼 불일치 내성 추가.
-  5) 차트 통화 레이블 보정: 툴팁/축에서 KRW 고정 제거 → "(native)" 표기.
-  6) 번역 키 추가: 혼합 통화 경고, 자동 전환 툴팁, 등 소소한 문구 정리.
-  7) 접근성: 버튼 title/i18n 정돈, 자동 전환 상태에 따라 라벨 즉시 반영.
+  - fx_rates.csv 자동 로드 및 KRW 기준 환산 KPI 표시
+  - 여러 경로 시도: (1) docs/data/reference/fx_rates.csv (2) data/reference/fx_rates.csv
+  - 혼합 통화 경고는 유지하되, KPI는 KRW 기준으로 일관 표시
+  - 차트는 "native 통화 기준" 그대로 유지(요청 시 KRW 차트도 확장 가능)
   -->
 
   <script src="https://cdn.tailwindcss.com"></script>
@@ -128,7 +125,11 @@
     const POSITIONS_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/holdings/positions.csv";
     const ASSETS_URL    = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/reference/assets.csv";
     const PRICES_URL    = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/prices/prices_daily.csv";
-    const PEOPLE_URL    = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/reference/people.csv";
+    // fx_rates.csv 후보 경로(상대 저장 위치에 따라 둘 다 시도)
+    const FX_URLS       = [
+      "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/reference/fx_rates.csv",
+      "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/data/reference/fx_rates.csv",
+    ];
 
     const REFRESH_MS = 5 * 60 * 1000;
     const PEOPLE_MAP = {};
@@ -141,9 +142,11 @@
     let investments = [];
     let cashByCurrency = {};
     let ASSET_MAP = new Map(); // asset_id -> asset row
+    let FX_MAP = {};           // "USD_KRW" -> rate
+    const FX_BASE = 'KRW';     // KPI 기준 통화
 
     // Currency symbols map
-    const CURRENCY_SYMBOLS = { KRW:'₩', USD:'$', EUR:'€', JPY:'¥', CNY:'¥' };
+    const CURRENCY_SYMBOLS = { KRW:'₩', USD:'$', EUR:'€', JPY:'¥', CNY:'¥', GBP:'£' };
 
     const TRANSLATIONS = {
       ko: {
@@ -155,15 +158,15 @@
         autoOff: "⏸️",
         minchae: "민채",
         yeonu: "연우",
-        kpiTotalLabel: "총 평가액",
-        kpiProfitLossLabel: "총 손익",
+        kpiTotalLabel: `총 평가액 (기준: ${'KRW'})`,
+        kpiProfitLossLabel: `총 손익 (기준: ${'KRW'})`,
         kpiCashLabel: "총 현금",
         kpiCashSubLabel: "안전 자산",
         kpiCountLabel: "보유 자산 수",
         kpiCountSubLabel: "펀드 + 현금",
         assetAllocationTitle: "자산 배분",
-        profitLossByAssetTitle: "자산별 손익(원화 환산 없음)",
-        portfolioTrendTitle: "포트폴리오 추이(원화 환산 없음)",
+        profitLossByAssetTitle: "자산별 손익 (native)",
+        portfolioTrendTitle: "포트폴리오 추이 (native)",
         holdingsTitle: "보유 자산",
         holdingsSubtitle: "카드를 탭하면 상세가 펼쳐집니다",
         cashHoldingsTitle: "현금 보유",
@@ -179,7 +182,7 @@
         fundCode: "코드",
         noDateData: "날짜 데이터 탐지 안 됨",
         total: "총계",
-        mixedCurrencyWarning: "여러 통화가 섞여 있어 총계/손익은 환율 반영 전입니다.",
+        mixedCurrencyWarning: `여러 통화가 섞여 있습니다. KPI는 ${'KRW'} 기준 환산으로 표시됩니다.`,
       },
       en: {
         dashboardTitle: "'s Investment Dashboard",
@@ -190,15 +193,15 @@
         autoOff: "⏸️",
         minchae: "Minchae",
         yeonu: "Yeonu",
-        kpiTotalLabel: "Total Valuation",
-        kpiProfitLossLabel: "Total P/L",
+        kpiTotalLabel: `Total Valuation (base: ${'KRW'})`,
+        kpiProfitLossLabel: `Total P/L (base: ${'KRW'})`,
         kpiCashLabel: "Total Cash",
         kpiCashSubLabel: "Safe Assets",
         kpiCountLabel: "Total Holdings",
         kpiCountSubLabel: "Funds + Cash",
         assetAllocationTitle: "Asset Allocation",
-        profitLossByAssetTitle: "P/L by Asset (no FX)",
-        portfolioTrendTitle: "Portfolio Trend (no FX)",
+        profitLossByAssetTitle: "P/L by Asset (native)",
+        portfolioTrendTitle: "Portfolio Trend (native)",
         holdingsTitle: "Holdings",
         holdingsSubtitle: "Tap card for details",
         cashHoldingsTitle: "Cash Holdings",
@@ -214,7 +217,7 @@
         fundCode: "Code",
         noDateData: "No Date Data Detected",
         total: "Total",
-        mixedCurrencyWarning: "Mixed currencies detected. Totals/P&L shown without FX.",
+        mixedCurrencyWarning: `Mixed currencies detected. KPIs shown in ${'KRW'} base.`,
       }
     };
 
@@ -264,7 +267,9 @@
     }
 
     function parseCSV(text) {
-      const rows = text.trim().split(/\r?\n/).filter(r => r && r.trim().length>0);
+      const rows = text.trim().split(/
+?
+/).filter(r => r && r.trim().length>0);
       if (rows.length === 0) return [];
       const headers = rows[0].split(SAFE_CSV_SPLIT).map(h => h.trim().replace(/"/g, ''));
       const data = [];
@@ -280,17 +285,38 @@
       return data;
     }
 
-    function applyTranslations(lang) {
-      $$('[data-i18n]').forEach(el => {
-        const key = el.getAttribute('data-i18n');
-        const text = TRANSLATIONS[lang][key];
-        if (!text) return;
-        if (el.tagName === 'OPTION') el.textContent = text; else el.textContent = text;
-      });
-      renderDashboardTitle();
-      const autoButton = $('#toggle-auto');
-      autoButton.textContent = switcherInterval ? TRANSLATIONS[CURRENT_LANG].autoOff : TRANSLATIONS[CURRENT_LANG].autoOn;
-      fetchDashboardData();
+    // ===================== FX =====================
+    async function fetchFXRates() {
+      for (const url of FX_URLS) {
+        try {
+          const res = await fetch(url + `?t=${Date.now()}`);
+          if (!res.ok) continue;
+          const text = await res.text();
+          const fxRows = parseCSV(text);
+          if (fxRows.length === 0) continue;
+          const latestDate = fxRows[fxRows.length - 1].date;
+          const map = {};
+          fxRows.filter(r => r.date === latestDate).forEach(r => {
+            const key = `${r.base}_${r.quote}`;
+            const rate = Number(r.rate);
+            if (Number.isFinite(rate)) map[key] = rate;
+          });
+          return map;
+        } catch (e) {
+          // try next URL
+        }
+      }
+      return {};
+    }
+
+    function convert(amount, from, to) {
+      if (!Number.isFinite(amount)) return 0;
+      if (from === to) return amount;
+      const dir = FX_MAP[`${from}_${to}`];
+      if (Number.isFinite(dir)) return amount * dir;
+      const rev = FX_MAP[`${to}_${from}`];
+      if (Number.isFinite(rev) && rev !== 0) return amount / rev;
+      return 0; // unknown pair
     }
 
     // ===================== FETCH & PARSE =====================
@@ -307,6 +333,9 @@
         if (!positionsRes.ok || !assetsRes.ok || !pricesRes.ok) {
           throw new Error(TRANSLATIONS[CURRENT_LANG].fetchError);
         }
+
+        // FX 먼저 받아두기
+        FX_MAP = await fetchFXRates();
 
         if (peopleRes.ok) {
           const peopleData = parseCSV(await peopleRes.text());
@@ -359,7 +388,7 @@
         });
 
         const timeline = buildTimeline(personPositions, pricesMap);
-        renderAll(timeline);
+        await renderAll(timeline); // KPI에서 FX 사용
         setLastUpdated();
         hideBanner();
 
@@ -387,15 +416,14 @@
 
       const sortedDates = Array.from(dates).sort();
 
-      // For each date, sum: priced positions at last known <= date + cash (native, no FX)
+      // For each date, sum: priced positions at last known <= date + cash (native, no FX on chart)
       sortedDates.forEach(date => {
         let dailyValue = 0;
         positions.forEach(pos => {
           const asset = ASSET_MAP.get(pos.asset_id);
           const qty = Number(pos.qty) || 0;
           if (asset?.type === 'cash') {
-            // Add cash qty at face value (native). This is a naive sum (no FX).
-            dailyValue += qty;
+            dailyValue += qty; // native sum (chart remains native)
             return;
           }
           const prices = pricesMap.get(pos.asset_id) || [];
@@ -411,9 +439,9 @@
     // ===================== RENDER =====================
     let donutChart, barsChart, lineChart;
 
-    function renderAll(timeline){
+    async function renderAll(timeline){
       renderDashboardTitle();
-      renderKPIs();
+      await renderKPIs();
       renderCashHoldings();
       renderHoldings();
       renderDonut();
@@ -434,55 +462,49 @@
       return Array.from(curSet).filter(Boolean);
     }
 
-    function calcTotals(){
-      // WARNING: no FX conversion. If multiple currencies exist, totals are not comparable.
-      let totalVal = 0; let totalCost = 0; let totalCash = 0;
-      for (const c in cashByCurrency) totalCash += cashByCurrency[c];
-      totalVal += totalCash; totalCost += totalCash; // naive
-      for (const inv of investments){
-        const curVal = (inv.currentPrice||0) * (inv.quantity||0);
-        const cost   = (inv.purchasePrice||0) * (inv.quantity||0);
-        totalVal += curVal; totalCost += cost;
-      }
-      return { totalVal, totalCost, totalPL: totalVal - totalCost, totalCash };
+    async function renderKPIs(){
+      const currencies = uniqueCurrencies();
+      if (currencies.length > 1) showBanner(TRANSLATIONS[CURRENT_LANG].mixedCurrencyWarning, 'info');
+
+      const { totalVal, totalCost, totalPL, totalCashKRW } = calcTotalsKRW();
+
+      // KPI는 KRW 기준으로 표시
+      $('#kpi-total').textContent = formatMMOrExact(totalVal, FX_BASE);
+      $('#kpi-total-mm').textContent = formatCurrency(totalVal, FX_BASE);
+
+      const rate = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
+      const plEl = $('#kpi-pl');
+      plEl.textContent = `${totalPL >= 0 ? '+' : ''}${formatMMOrExact(Math.abs(totalPL), FX_BASE)}`;
+      const rateEl = $('#kpi-pl-rate');
+      rateEl.textContent = `${TRANSLATIONS[CURRENT_LANG].rateOfReturn} ${rate >= 0 ? '+' : ''}${nfc.format(rate)}%`;
+      plEl.classList.toggle('text-emerald-600', totalPL >= 0);
+      plEl.classList.toggle('text-rose-600', totalPL < 0);
+
+      // 현금 KPI (KRW 환산)
+      $('#kpi-cash').textContent = formatMMOrExact(totalCashKRW, FX_BASE);
+      $('#kpi-count').textContent = String(investments.length + Object.keys(cashByCurrency).length);
     }
 
-    function renderKPIs(){
-      const currencies = uniqueCurrencies();
-      const mixed = currencies.length > 1;
-      if (mixed) showBanner(TRANSLATIONS[CURRENT_LANG].mixedCurrencyWarning, 'info');
+    function calcTotalsKRW(){
+      let totalValKRW = 0, totalCostKRW = 0, totalCashKRW = 0;
 
-      const { totalVal, totalCost, totalPL, totalCash } = calcTotals();
-
-      // If mixed currencies, do not show meaningless totals.
-      if (mixed) {
-        $('#kpi-total').textContent = '—';
-        $('#kpi-total-mm').textContent = '—';
-        $('#kpi-pl').textContent = '—';
-        $('#kpi-pl-rate').textContent = '—';
-      } else {
-        const base = currencies[0] || 'KRW';
-        $('#kpi-total').textContent = formatMMOrExact(totalVal, base);
-        $('#kpi-total-mm').textContent = formatCurrency(totalVal, base);
-
-        const rate = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
-        const plEl = $('#kpi-pl');
-        plEl.textContent = `${totalPL >= 0 ? '+' : ''}${formatMMOrExact(Math.abs(totalPL), base)}`;
-        const rateEl = $('#kpi-pl-rate');
-        rateEl.textContent = `${TRANSLATIONS[CURRENT_LANG].rateOfReturn} ${rate >= 0 ? '+' : ''}${nfc.format(rate)}%`;
-        plEl.classList.toggle('text-emerald-600', totalPL >= 0);
-        plEl.classList.toggle('text-rose-600', totalPL < 0);
+      // Cash (convert to KRW)
+      for (const c in cashByCurrency) {
+        totalCashKRW += convert(cashByCurrency[c], c, FX_BASE);
       }
+      totalValKRW += totalCashKRW;
+      totalCostKRW += totalCashKRW; // 현금은 원가 = 현재가로 취급
 
-      // Cash KPI can be shown as sum only if single currency
-      if (mixed) {
-        $('#kpi-cash').textContent = '—';
-      } else {
-        const base = currencies[0] || 'KRW';
-        $('#kpi-cash').textContent = formatMMOrExact(totalCash, base);
+      // Investments (convert to KRW)
+      for (const inv of investments){
+        const curValNative = (inv.currentPrice||0) * (inv.quantity||0);
+        const costNative   = (inv.purchasePrice||0) * (inv.quantity||0);
+        const curValKRW = convert(curValNative, inv.currency, FX_BASE);
+        const costKRW   = convert(costNative,   inv.currency, FX_BASE);
+        totalValKRW += curValKRW;
+        totalCostKRW += costKRW;
       }
-
-      $('#kpi-count').textContent = String(investments.length + Object.keys(cashByCurrency).length);
+      return { totalVal: totalValKRW, totalCost: totalCostKRW, totalPL: totalValKRW - totalCostKRW, totalCashKRW };
     }
 
     function renderCashHoldings() {
@@ -696,6 +718,19 @@
         option.value = id; option.textContent = label; selector.appendChild(option);
       }
       selector.value = current || TARGET_PERSON;
+    }
+
+    function applyTranslations(lang) {
+      $$('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        const text = TRANSLATIONS[lang][key];
+        if (!text) return;
+        if (el.tagName === 'OPTION') el.textContent = text; else el.textContent = text;
+      });
+      renderDashboardTitle();
+      const autoButton = $('#toggle-auto');
+      autoButton.textContent = switcherInterval ? TRANSLATIONS[CURRENT_LANG].autoOff : TRANSLATIONS[CURRENT_LANG].autoOn;
+      fetchDashboardData();
     }
 
     // ===================== INIT =====================
