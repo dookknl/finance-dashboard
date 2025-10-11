@@ -8,13 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
-      theme: {
-        extend: {
-          boxShadow: {
-            soft: '0 10px 30px rgba(0,0,0,0.06)'
-          }
-        }
-      },
+      theme: { extend: { boxShadow: { soft: '0 10px 30px rgba(0,0,0,0.06)' } } },
       darkMode: 'class'
     }
   </script>
@@ -53,6 +47,7 @@
 
     <div id="status-banner" class="hidden mb-4 rounded-2xl border px-4 py-3 text-sm"></div>
 
+    <!-- KPI + FX 카드 (5개가 되면 두 번째 줄로 자연스럽게 내려갑니다) -->
     <section class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
       <div class="kpi bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800">
         <div class="text-sm text-slate-500 dark:text-slate-400" data-i18n="kpiTotalLabel"></div>
@@ -73,6 +68,20 @@
         <div class="text-sm text-slate-500 dark:text-slate-400" data-i18n="kpiCountLabel"></div>
         <div id="kpi-count" class="text-3xl font-extrabold mt-1 tracking-tight">0</div>
         <div class="text-xs text-slate-500 mt-1" data-i18n="kpiCountSubLabel"></div>
+      </div>
+
+      <!-- ✅ 오늘의 환율 카드 -->
+      <div id="fx-card" class="kpi bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-soft border border-slate-100 dark:border-slate-800">
+        <div class="text-sm text-slate-500 dark:text-slate-400 flex items-center justify-between">
+          <span data-i18n="fxTitle"></span>
+          <span class="text-[10px] px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700 text-slate-500">
+            <span data-i18n="fxBase"></span>: <span id="fx-base">KRW</span>
+          </span>
+        </div>
+        <div id="fx-list" class="mt-2 grid grid-cols-2 gap-2 text-sm">
+          <!-- rates will render here -->
+        </div>
+        <div id="fx-asof" class="text-[11px] text-slate-500 mt-2"></div>
       </div>
     </section>
 
@@ -103,10 +112,10 @@
     </section>
 
     <section id="cash-holdings-section" class="mb-10">
-        <div class="flex items-end justify-between mb-3">
-            <h2 class="text-xl font-extrabold" data-i18n="cashHoldingsTitle"></h2>
-        </div>
-        <div id="cash-holdings" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+      <div class="flex items-end justify-between mb-3">
+        <h2 class="text-xl font-extrabold" data-i18n="cashHoldingsTitle"></h2>
+      </div>
+      <div id="cash-holdings" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
     </section>
 
     <footer class="text-center text-xs text-slate-500 pb-8 opacity-80" data-i18n="footer"></footer>
@@ -115,16 +124,21 @@
   <script>
     // ===================== CONFIG =====================
     const POSITIONS_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/holdings/positions.csv";
-    const ASSETS_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/reference/assets.csv";
-    const PRICES_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/prices/prices_daily.csv";
-    const PEOPLE_URL = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/reference/people.csv";
+    const ASSETS_URL    = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/reference/assets.csv";
+    const PRICES_URL    = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/prices/prices_daily.csv";
+    const PEOPLE_URL    = "https://raw.githubusercontent.com/dookknl/finance-dashboard/main/docs/data/reference/people.csv";
 
     const REFRESH_MS = 5 * 60 * 1000;
     const PEOPLE_MAP = {};
     const PEOPLE_IDS = ['minchae', 'yeonu'];
     let TARGET_PERSON = 'minchae';
-    let CURRENT_LANG = 'ko';
+    let CURRENT_LANG  = 'ko';
     let switcherInterval = null;
+
+    // FX config
+    const FX_BASE = 'KRW';
+    const FX_SYMBOLS = ['USD','EUR','JPY','CNY']; // 보여줄 통화
+    let fxData = null; // { date, rates: {sym: rateKRWtoSym}, fetchedAt }
 
     // Global data stores
     let investments = [];
@@ -132,13 +146,7 @@
     const MM_THRESHOLD = 1000000; // 1 million
 
     // Currency symbols map
-    const CURRENCY_SYMBOLS = {
-      'KRW': '₩',
-      'USD': '$',
-      'EUR': '€',
-      'JPY': '¥',
-      'CNY': '¥'
-    };
+    const CURRENCY_SYMBOLS = { 'KRW':'₩','USD':'$','EUR':'€','JPY':'¥','CNY':'¥' };
 
     const TRANSLATIONS = {
       ko: {
@@ -173,7 +181,12 @@
         rateOfReturn: "수익률",
         fundCode: "코드",
         noDateData: "날짜 데이터 탐지 안 됨",
-        total: "총계"
+        total: "총계",
+        // FX
+        fxTitle: "오늘의 환율",
+        fxBase: "기준",
+        fxAsOf: "기준일",
+        fxError: "환율 정보를 불러오지 못했습니다."
       },
       en: {
         dashboardTitle: "'s Investment Dashboard",
@@ -207,7 +220,12 @@
         rateOfReturn: "Return Rate",
         fundCode: "Code",
         noDateData: "No Date Data Detected",
-        total: "Total"
+        total: "Total",
+        // FX
+        fxTitle: "Today's FX Rates",
+        fxBase: "Base",
+        fxAsOf: "As of",
+        fxError: "Failed to load FX rates."
       }
     };
 
@@ -216,28 +234,23 @@
     const $$ = (sel) => document.querySelectorAll(sel);
     const SAFE_CSV_SPLIT = /,(?=(?:[^"]*"[^"]*")*[^"]*$)/;
 
-    const nf = new Intl.NumberFormat('ko-KR');
+    const nf  = new Intl.NumberFormat('ko-KR');
     const nfc = new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    
+    const nfx = new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }); // FX 표기
+
     function formatCurrency(n, currency) {
       const symbol = CURRENCY_SYMBOLS[currency] || currency;
       return `${symbol}${nf.format(Math.round(n || 0))}`;
     }
-
     function toMM(n, currency) {
       const symbol = CURRENCY_SYMBOLS[currency] || currency;
       const formatted = nfc.format((n || 0) / 1_000_000);
       return `${symbol}${formatted} MM`;
     }
-
     function formatMMOrExact(n, currency) {
-      if (Math.abs(n) < 1_000_000) {
-        return formatCurrency(n, currency);
-      } else {
-        return toMM(n, currency);
-      }
+      if (Math.abs(n) < 1_000_000) return formatCurrency(n, currency);
+      return toMM(n, currency);
     }
-
     function showBanner(msg, tone='info') {
       const el = $('#status-banner');
       el.textContent = msg;
@@ -251,44 +264,37 @@
       el.classList.toggle('text-red-700', tone==='error');
       el.classList.remove('hidden');
     }
-
     function hideBanner(){ $('#status-banner').classList.add('hidden'); }
-    function setLastUpdated(){ $('#last-updated').textContent = `${TRANSLATIONS[CURRENT_LANG].lastUpdated.split(':')[0]}: ${new Date().toLocaleString(CURRENT_LANG === 'ko' ? 'ko-KR' : 'en-US')}`; }
-
-    function parseCSV(text) {
-        const rows = text.trim().split(/\r?\n/);
-        const headers = rows[0].split(SAFE_CSV_SPLIT).map(h => h.trim().replace(/"/g, ''));
-        const data = [];
-        for (let i = 1; i < rows.length; i++) {
-            const values = rows[i].split(SAFE_CSV_SPLIT).map(v => v.trim().replace(/"/g, ''));
-            const row = {};
-            headers.forEach((h, idx) => {
-                row[h] = values[idx];
-            });
-            data.push(row);
-        }
-        return data;
+    function setLastUpdated(){
+      $('#last-updated').textContent =
+        `${TRANSLATIONS[CURRENT_LANG].lastUpdated.split(':')[0]}: ${new Date().toLocaleString(CURRENT_LANG === 'ko' ? 'ko-KR' : 'en-US')}`;
     }
-
+    function parseCSV(text) {
+      const rows = text.trim().split(/\r?\n/);
+      const headers = rows[0].split(SAFE_CSV_SPLIT).map(h => h.trim().replace(/"/g, ''));
+      const data = [];
+      for (let i = 1; i < rows.length; i++) {
+        const values = rows[i].split(SAFE_CSV_SPLIT).map(v => v.trim().replace(/"/g, ''));
+        const row = {};
+        headers.forEach((h, idx) => { row[h] = values[idx]; });
+        data.push(row);
+      }
+      return data;
+    }
     function applyTranslations(lang) {
       $$('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
-        let text = TRANSLATIONS[lang][key];
-        if (el.tagName === 'INPUT' || el.tagName === 'SELECT') {
-          el.options.forEach(option => {
-            if (option.value === el.value) {
-              option.textContent = text;
-            }
-          });
-        } else if (el.tagName === 'OPTION') {
-          el.textContent = text;
-        } else {
-          el.textContent = text;
-        }
+        const text = TRANSLATIONS[lang][key];
+        if (!text) return;
+        if (el.tagName === 'OPTION') el.textContent = text;
+        else el.textContent = text;
       });
-      renderDashboardTitle();
+      // 버튼 아이콘 텍스트
       const autoButton = $('#toggle-auto');
       autoButton.textContent = switcherInterval ? TRANSLATIONS[CURRENT_LANG].autoOff : TRANSLATIONS[CURRENT_LANG].autoOn;
+      renderDashboardTitle();
+      // 환율 카드도 재렌더(라벨만 변경)
+      renderFxCard();
       fetchDashboardData();
     }
 
@@ -298,7 +304,7 @@
     function diffDays(a, b){ return Math.round((parseISO(b) - parseISO(a)) / DAY_MS); }
     function isMonthStart(d){ return parseISO(d).getDate() === 1; }
     function isQuarterStart(d){
-      const dt = parseISO(d); const m = dt.getMonth()+1; // 1..12
+      const dt = parseISO(d); const m = dt.getMonth()+1;
       return dt.getDate() === 1 && (m===1 || m===4 || m===7 || m===10);
     }
     function pickTickLevel(startISO, endISO){
@@ -311,111 +317,109 @@
 
     // ===================== FETCH & PARSE =====================
     async function fetchDashboardData() {
-        showBanner(TRANSLATIONS[CURRENT_LANG].fetching, 'info');
-        try {
-            const [positionsRes, assetsRes, pricesRes, peopleRes] = await Promise.all([
-              fetch(POSITIONS_URL + `?t=${Date.now()}`),
-              fetch(ASSETS_URL + `?t=${Date.now()}`),
-              fetch(PRICES_URL + `?t=${Date.now()}`),
-              fetch(PEOPLE_URL + `?t=${Date.now()}`),
-            ]);
-            
-            if (!positionsRes.ok || !assetsRes.ok || !pricesRes.ok) {
-                throw new Error(TRANSLATIONS[CURRENT_LANG].fetchError);
-            }
-            if (peopleRes.ok) {
-                const peopleData = parseCSV(await peopleRes.text());
-                peopleData.forEach(p => PEOPLE_MAP[p.id] = p.name);
-            }
-
-            const positionsText = await positionsRes.text();
-            const assetsText = await assetsRes.text();
-            const pricesText = await pricesRes.text();
-
-            const positionsData = parseCSV(positionsText);
-            const assetsData = parseCSV(assetsText);
-            const pricesData = parseCSV(pricesText);
-
-            const personPositions = positionsData.filter(pos => pos.person_id === TARGET_PERSON);
-            
-            const assetMap = new Map();
-            assetsData.forEach(asset => {
-                assetMap.set(asset.asset_id, asset);
-            });
-
-            const pricesMap = new Map();
-            pricesData.forEach(price => {
-                if (!pricesMap.has(price.asset_id)) {
-                    pricesMap.set(price.asset_id, []);
-                }
-                pricesMap.get(price.asset_id).push({ date: price.date, close: Number(price.close) });
-            });
-
-            // Populate investments and cash holdings
-            investments = [];
-            cashByCurrency = {};
-            personPositions.forEach(pos => {
-                const assetRef = assetMap.get(pos.asset_id);
-                if (!assetRef) return;
-
-                if (assetRef.type === 'cash') {
-                    const currency = assetRef.currency;
-                    cashByCurrency[currency] = (cashByCurrency[currency] || 0) + Number(pos.qty);
-                } else {
-                    const latestPrice = (pricesMap.get(pos.asset_id) || []).slice(-1)[0]?.close || Number(assetRef.current_price);
-                    investments.push({
-                        name: assetRef.short_name,
-                        fund_cd: pos.asset_id,
-                        quantity: Number(pos.qty),
-                        purchasePrice: Number(pos.cost_per_unit),
-                        currentPrice: latestPrice,
-                        currency: assetRef.currency
-                    });
-                }
-            });
-
-            const timeline = buildTimeline(personPositions, pricesMap);
-            renderAll(timeline);
-            setLastUpdated();
-            hideBanner();
-
-        } catch (e) {
-            console.error(e);
-            showBanner(e.message, 'error');
+      showBanner(TRANSLATIONS[CURRENT_LANG].fetching, 'info');
+      try {
+        const [positionsRes, assetsRes, pricesRes, peopleRes] = await Promise.all([
+          fetch(POSITIONS_URL + `?t=${Date.now()}`),
+          fetch(ASSETS_URL    + `?t=${Date.now()}`),
+          fetch(PRICES_URL    + `?t=${Date.now()}`),
+          fetch(PEOPLE_URL    + `?t=${Date.now()}`)
+        ]);
+        if (!positionsRes.ok || !assetsRes.ok || !pricesRes.ok) {
+          throw new Error(TRANSLATIONS[CURRENT_LANG].fetchError);
         }
+        if (peopleRes.ok) {
+          const peopleData = parseCSV(await peopleRes.text());
+          peopleData.forEach(p => PEOPLE_MAP[p.id] = p.name);
+        }
+        const [positionsText, assetsText, pricesText] = await Promise.all([
+          positionsRes.text(), assetsRes.text(), pricesRes.text()
+        ]);
+        const positionsData = parseCSV(positionsText);
+        const assetsData    = parseCSV(assetsText);
+        const pricesData    = parseCSV(pricesText);
+
+        const personPositions = positionsData.filter(pos => pos.person_id === TARGET_PERSON);
+        const assetMap = new Map();
+        assetsData.forEach(asset => assetMap.set(asset.asset_id, asset));
+
+        const pricesMap = new Map();
+        pricesData.forEach(price => {
+          if (!pricesMap.has(price.asset_id)) pricesMap.set(price.asset_id, []);
+          pricesMap.get(price.asset_id).push({ date: price.date, close: Number(price.close) });
+        });
+
+        // Populate investments and cash holdings
+        investments = [];
+        cashByCurrency = {};
+        personPositions.forEach(pos => {
+          const assetRef = assetMap.get(pos.asset_id);
+          if (!assetRef) return;
+          if (assetRef.type === 'cash') {
+            const currency = assetRef.currency;
+            cashByCurrency[currency] = (cashByCurrency[currency] || 0) + Number(pos.qty);
+          } else {
+            const latestPrice = (pricesMap.get(pos.asset_id) || []).slice(-1)[0]?.close || Number(assetRef.current_price);
+            investments.push({
+              name: assetRef.short_name, fund_cd: pos.asset_id,
+              quantity: Number(pos.qty), purchasePrice: Number(pos.cost_per_unit),
+              currentPrice: latestPrice, currency: assetRef.currency
+            });
+          }
+        });
+
+        const timeline = buildTimeline(personPositions, pricesMap);
+        renderAll(timeline);
+        setLastUpdated();
+        hideBanner();
+      } catch (e) {
+        console.error(e);
+        showBanner(e.message, 'error');
+      }
+    }
+
+    async function fetchFxRates(){
+      try {
+        const url = `https://api.exchangerate.host/latest?base=${encodeURIComponent(FX_BASE)}&symbols=${encodeURIComponent(FX_SYMBOLS.join(','))}`;
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error('FX fetch failed');
+        const j = await res.json();
+        // API는 KRW->USD(등) 비율을 반환하므로, 보이는 값은 1 USD = ? KRW 형태로 역수 처리
+        fxData = { date: j.date, rates: j.rates, fetchedAt: new Date().toISOString() };
+        renderFxCard();
+      } catch(err){
+        console.error(err);
+        const list = $('#fx-list');
+        list.innerHTML = `<div class="col-span-2 text-rose-600 text-sm">${TRANSLATIONS[CURRENT_LANG].fxError}</div>`;
+        $('#fx-asof').textContent = '';
+      }
     }
 
     function buildTimeline(positions, pricesMap) {
-        const timeline = new Map();
-        const dates = new Set();
-
+      const timeline = new Map();
+      const dates = new Set();
+      positions.forEach(pos => {
+        const assetPrices = pricesMap.get(pos.asset_id);
+        if (!assetPrices) return;
+        assetPrices.forEach(price => dates.add(price.date));
+      });
+      const sortedDates = Array.from(dates).sort();
+      sortedDates.forEach(date => {
+        let dailyValue = 0;
         positions.forEach(pos => {
-            const assetPrices = pricesMap.get(pos.asset_id);
-            if (!assetPrices) return;
-
-            assetPrices.forEach(price => dates.add(price.date));
+          const pricesForAsset = pricesMap.get(pos.asset_id) || [];
+          const priceOnDate = pricesForAsset
+            .filter(p => p.date <= date)
+            .sort((a, b) => b.date.localeCompare(a.date))[0];
+          if (priceOnDate) {
+            dailyValue += Number(pos.qty) * priceOnDate.close;
+          } else if (pos.asset_id.startsWith('CASH')) {
+            dailyValue += Number(pos.qty);
+          }
         });
-
-        const sortedDates = Array.from(dates).sort();
-
-        sortedDates.forEach(date => {
-            let dailyValue = 0;
-            positions.forEach(pos => {
-                const pricesForAsset = pricesMap.get(pos.asset_id) || [];
-                const priceOnDate = pricesForAsset
-                    .filter(p => p.date <= date)
-                    .sort((a, b) => b.date.localeCompare(a.date))[0];
-
-                if (priceOnDate) {
-                    dailyValue += Number(pos.qty) * priceOnDate.close;
-                } else if (pos.asset_id.startsWith('CASH')) {
-                    dailyValue += Number(pos.qty);
-                }
-            });
-            timeline.set(date, dailyValue);
-        });
-        
-        return timeline;
+        timeline.set(date, dailyValue);
+      });
+      return timeline;
     }
 
     // ===================== RENDER =====================
@@ -438,21 +442,15 @@
     }
 
     function calcTotals(){
-      let totalVal = 0;
-      let totalCost = 0;
-      let totalCash = 0;
-      for (const currency in cashByCurrency) {
-          totalCash += cashByCurrency[currency]; // (주의) 통화 혼합 시 총계는 단일화폐 환산 필요
-      }
-      totalVal += totalCash;
-      totalCost += totalCash;
+      let totalVal = 0, totalCost = 0, totalCash = 0;
+      for (const currency in cashByCurrency) totalCash += cashByCurrency[currency];
+      totalVal += totalCash; totalCost += totalCash;
       for (const inv of investments){
         const curVal = (inv.currentPrice||0) * inv.quantity;
-        const cost = inv.purchasePrice * inv.quantity;
-        totalVal += curVal;
-        totalCost += cost;
+        const cost   = inv.purchasePrice * inv.quantity;
+        totalVal += curVal; totalCost += cost;
       }
-      return { totalVal, totalCost, totalPL: totalVal - totalCost, totalCash: totalCash };
+      return { totalVal, totalCost, totalPL: totalVal - totalCost, totalCash };
     }
 
     function renderKPIs(){
@@ -461,35 +459,63 @@
       $('#kpi-total-mm').textContent = formatCurrency(totalVal, 'KRW');
       $('#kpi-cash').textContent = formatMMOrExact(totalCash, 'KRW');
       $('#kpi-count').textContent = String(investments.length + Object.keys(cashByCurrency).length);
-
       const rate = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
-      const plEl = $('#kpi-pl');
+      const plEl = $('#kpi-pl'); const rateEl = $('#kpi-pl-rate');
       plEl.textContent = `${totalPL >= 0 ? '+' : ''}${formatMMOrExact(Math.abs(totalPL), 'KRW')}`;
-      const rateEl = $('#kpi-pl-rate');
       rateEl.textContent = `${TRANSLATIONS[CURRENT_LANG].rateOfReturn} ${rate >= 0 ? '+' : ''}${nfc.format(rate)}%`;
       plEl.classList.toggle('text-emerald-600', totalPL >= 0);
       plEl.classList.toggle('text-rose-600', totalPL < 0);
     }
 
+    function renderFxCard(){
+      const list = $('#fx-list');
+      $('#fx-base').textContent = FX_BASE;
+      if (!fxData || !fxData.rates){
+        list.innerHTML = `
+          <div class="skeleton rounded-lg h-6"></div>
+          <div class="skeleton rounded-lg h-6"></div>
+          <div class="skeleton rounded-lg h-6"></div>
+          <div class="skeleton rounded-lg h-6"></div>
+        `;
+        $('#fx-asof').textContent = '';
+        return;
+      }
+      // fxData.rates: KRW->sym 비율, 보기는 1 sym = ? KRW
+      const lines = FX_SYMBOLS.map(sym => {
+        const r = fxData.rates[sym];
+        if (!r) return `<div class="col-span-2">${sym}: —</div>`;
+        const inv = 1 / r; // sym->KRW
+        return `
+          <div class="flex items-center justify-between px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800">
+            <div class="font-semibold">${sym}/KRW</div>
+            <div class="tabular-nums">${nfx.format(inv)} KRW</div>
+          </div>
+        `;
+      }).join('');
+      list.innerHTML = lines;
+      const asofLabel = TRANSLATIONS[CURRENT_LANG].fxAsOf;
+      $('#fx-asof').textContent = `${asofLabel}: ${fxData.date}`;
+    }
+
     function renderCashHoldings() {
-        const wrap = $('#cash-holdings');
-        wrap.innerHTML = '';
-        if (Object.keys(cashByCurrency).length === 0) {
-            $('#cash-holdings-section').style.display = 'none';
-        } else {
-            $('#cash-holdings-section').style.display = 'block';
-            for (const currency in cashByCurrency) {
-                const amount = cashByCurrency[currency];
-                const card = document.createElement('div');
-                card.className = 'bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 shadow-soft';
-                card.innerHTML = `
-                    <div class="text-sm text-slate-500 dark:text-slate-400">${TRANSLATIONS[CURRENT_LANG].kpiCashLabel} (${currency})</div>
-                    <div class="text-3xl font-extrabold mt-1 tracking-tight">${formatMMOrExact(amount, currency)}</div>
-                    <div class="text-xs text-slate-500 mt-1">${formatCurrency(amount, currency)}</div>
-                `;
-                wrap.appendChild(card);
-            }
+      const wrap = $('#cash-holdings');
+      wrap.innerHTML = '';
+      if (Object.keys(cashByCurrency).length === 0) {
+        $('#cash-holdings-section').style.display = 'none';
+      } else {
+        $('#cash-holdings-section').style.display = 'block';
+        for (const currency in cashByCurrency) {
+          const amount = cashByCurrency[currency];
+          const card = document.createElement('div');
+          card.className = 'bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 shadow-soft';
+          card.innerHTML = `
+            <div class="text-sm text-slate-500 dark:text-slate-400">${TRANSLATIONS[CURRENT_LANG].kpiCashLabel} (${currency})</div>
+            <div class="text-3xl font-extrabold mt-1 tracking-tight">${formatMMOrExact(amount, currency)}</div>
+            <div class="text-xs text-slate-500 mt-1">${formatCurrency(amount, currency)}</div>
+          `;
+          wrap.appendChild(card);
         }
+      }
     }
 
     function renderHoldings(){
@@ -497,9 +523,9 @@
       wrap.innerHTML = '';
       for (const inv of investments){
         const curVal = inv.quantity * (inv.currentPrice||0);
-        const cost = inv.quantity * inv.purchasePrice;
-        const pl = curVal - cost;
-        const gain = pl >= 0;
+        const cost   = inv.quantity * inv.purchasePrice;
+        const pl     = curVal - cost;
+        const gain   = pl >= 0;
         const card = document.createElement('div');
         card.className = 'bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 shadow-soft hover:shadow transition-all cursor-pointer';
         card.innerHTML = `
@@ -543,147 +569,94 @@
     function renderDonut(){
       const cashTotal = Object.values(cashByCurrency).reduce((sum, val) => sum + val, 0);
       const labels = [...investments.map(i => i.name), TRANSLATIONS[CURRENT_LANG].kpiCashLabel];
-      const data = [
-        ...investments.map(i => i.quantity * (i.currentPrice || 0)),
-        cashTotal
-      ];
+      const data   = [...investments.map(i => i.quantity * (i.currentPrice || 0)), cashTotal];
       if (donutChart) donutChart.destroy();
       donutChart = new Chart($('#donut').getContext('2d'), {
         type: 'doughnut',
         data: { labels, datasets: [{ data }] },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatMMOrExact(ctx.parsed, 'KRW')}` } } }
-        }
-      });
-    }
-
-    // ---- 막대(bar) 차트: Y축/툴팁을 ₩XX.X MM 형식으로 ----
-    function renderBars(){
-      const labels = investments.map(i => i.name);
-      const currentValues = investments.map(i => i.quantity * (i.currentPrice || 0));
-      const initialCosts  = investments.map(i => i.quantity * i.purchasePrice);
-
-      if (barsChart) barsChart.destroy();
-      barsChart = new Chart($('#bars').getContext('2d'), {
-        type: 'bar',
-        data: {
-          labels,
-          datasets: [
-            { label: 'Current Value (MM)', data: currentValues, borderWidth: 1 },
-            { label: 'Initial Cost (MM)',  data: initialCosts,  borderWidth: 1 }
-          ]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                callback: v => `${CURRENCY_SYMBOLS['KRW']}${(v/1_000_000).toFixed(1)} MM`
-              }
-            },
-            x: { stacked: false }
-          },
           plugins: {
-            legend: { display: true },
-            tooltip: {
-              callbacks: {
-                label: c => ` ${c.dataset.label}: ${CURRENCY_SYMBOLS['KRW']}${(c.parsed.y/1_000_000).toFixed(1)} MM`
-              }
-            }
+            legend: { position: 'bottom' },
+            tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatMMOrExact(ctx.parsed, 'KRW')}` } }
           }
         }
       });
     }
 
-    // ---- 라인(line) 차트: 기간에 따라 주/격주/월/분기 라벨 표시 ----
+    function renderBars(){
+      const labels = investments.map(i => i.name);
+      const currentValues = investments.map(i => i.quantity * (i.currentPrice || 0));
+      const initialCosts  = investments.map(i => i.quantity * i.purchasePrice);
+      if (barsChart) barsChart.destroy();
+      barsChart = new Chart($('#bars').getContext('2d'), {
+        type: 'bar',
+        data: { labels, datasets: [
+          { label: 'Current Value (MM)', data: currentValues, borderWidth: 1 },
+          { label: 'Initial Cost (MM)',  data: initialCosts,  borderWidth: 1 }
+        ]},
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, ticks: { callback: v => `${CURRENCY_SYMBOLS['KRW']}${(v/1_000_000).toFixed(1)} MM` } },
+            x: { stacked: false }
+          },
+          plugins: {
+            legend: { display: true },
+            tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${CURRENCY_SYMBOLS['KRW']}${(c.parsed.y/1_000_000).toFixed(1)} MM` } }
+          }
+        }
+      });
+    }
+
     function renderLine(timeline){
       const badge = $('#timeline-badge');
       if (!timeline || timeline.size === 0){
         badge.textContent = TRANSLATIONS[CURRENT_LANG].noDateData;
         if (lineChart) { lineChart.destroy(); lineChart = null; }
-        const ctx = $('#line').getContext('2d');
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        const ctx = $('#line').getContext('2d'); ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         return;
       }
-
-      // raw daily dates/values
-      const rawDates = Array.from(timeline.keys());     // 'YYYY-MM-DD'
-      const data = Array.from(timeline.values());
-
-      // decide tick density based on whole span
-      const startISO = rawDates[0];
-      const endISO   = rawDates[rawDates.length - 1];
-      const level = pickTickLevel(startISO, endISO);    // 'weekly'|'biweekly'|'monthly'|'quarterly'
+      const rawDates = Array.from(timeline.keys());
+      const data     = Array.from(timeline.values());
+      const startISO = rawDates[0], endISO = rawDates[rawDates.length - 1];
+      const level = pickTickLevel(startISO, endISO);
       badge.textContent = `${startISO} ~ ${endISO}`;
 
-      // formatting function for tick labels
       const fmtLabel = (d) => {
         const [y,m,dd] = d.split('-');
         if (level === 'weekly' || level === 'biweekly') return `${y.slice(2)}-${m}-${dd}`;
         if (level === 'monthly')   return `${y.slice(2)}-${m}`;
-        /* quarterly */            return `${y} Q${Math.floor((Number(m)-1)/3)+1}`;
+        return `${y} Q${Math.floor((Number(m)-1)/3)+1}`;
       };
-
-      // predicate: show or hide a tick at a given date
       const showTick = (d) => {
         switch(level){
-          case 'weekly': {
-            const dt = parseISO(d);
-            return dt.getDay() === 1; // Monday only
-          }
+          case 'weekly':   return new Date(d).getDay() === 1; // 월요일
           case 'biweekly': {
-            // 격주 월요일: 첫 번째 월요일 기준으로 2주 간격
-            const firstMonday = rawDates.find(dd => parseISO(dd).getDay() === 1);
-            if (!firstMonday) return false;
-            const dt = parseISO(d);
-            if (dt.getDay() !== 1) return false;
-            const weeks = Math.round(diffDays(firstMonday, d)/7);
-            return weeks % 2 === 0;
+            const firstMon = rawDates.find(dd => new Date(dd).getDay() === 1);
+            if (!firstMon) return false;
+            const weeks = Math.round(diffDays(firstMon, d)/7);
+            return new Date(d).getDay() === 1 && weeks % 2 === 0;
           }
-          case 'monthly':
-            return isMonthStart(d);
-          case 'quarterly':
-            return isQuarterStart(d);
-          default:
-            return true;
+          case 'monthly':   return isMonthStart(d);
+          case 'quarterly': return isQuarterStart(d);
+          default:          return true;
         }
       };
 
       const labels = rawDates;
-
       if (lineChart) lineChart.destroy();
       lineChart = new Chart($('#line').getContext('2d'), {
         type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: 'Total Value (MM)',
-            data,
-            tension: 0.3,
-            fill: true
-          }]
-        },
+        data: { labels, datasets: [{ label: 'Total Value (MM)', data, tension: 0.3, fill: true }] },
         options: {
-          responsive: true,
-          maintainAspectRatio: false,
+          responsive: true, maintainAspectRatio: false,
           scales: {
-            y: {
-              beginAtZero: false,
-              ticks: {
-                callback: v => `${CURRENCY_SYMBOLS['KRW']}${(v/1_000_000).toFixed(1)} MM`
-              }
-            },
+            y: { beginAtZero: false, ticks: { callback: v => `${CURRENCY_SYMBOLS['KRW']}${(v/1_000_000).toFixed(1)} MM` } },
             x: {
               ticks: {
-                autoSkip: false,   // 직접 필터링
-                maxRotation: 0,
-                minRotation: 0,
-                callback: function(value, index){
-                  const d = labels[index];
-                  return showTick(d) ? fmtLabel(d) : '';
-                }
+                autoSkip: false, maxRotation: 0, minRotation: 0,
+                callback: (_, idx){ const d = labels[idx]; return showTick(d) ? fmtLabel(d) : ''; }
               }
             }
           },
@@ -691,10 +664,7 @@
             legend: { display: false },
             tooltip: {
               callbacks: {
-                title: items => {
-                  const d = labels[items[0].dataIndex];
-                  return d; // YYYY-MM-DD
-                },
+                title: items => labels[items[0].dataIndex],
                 label: c => ` ${CURRENCY_SYMBOLS['KRW']}${(c.parsed.y/1_000_000).toFixed(1)} MM`
               }
             }
@@ -710,83 +680,66 @@
       $('#person-select').value = personId;
       fetchDashboardData();
     }
-    
     function setLanguage(lang) {
       CURRENT_LANG = lang;
       localStorage.setItem('dashboardLang', lang);
       applyTranslations(lang);
     }
-
     function enterFullscreen(){
       const el = document.documentElement;
       if (el.requestFullscreen) el.requestFullscreen();
       else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
       else if (el.msRequestFullscreen) el.msRequestFullscreen();
     }
-
     function applyStoredTheme(){
       const stored = localStorage.getItem('theme-mode');
       if (stored === 'dark') document.documentElement.classList.add('dark');
     }
-
     function toggleTheme(){
       const html = document.documentElement;
       html.classList.toggle('dark');
       localStorage.setItem('theme-mode', html.classList.contains('dark') ? 'dark' : 'light');
     }
-
     function toggleSwitcher() {
-        const button = $('#toggle-auto');
-        if (switcherInterval) {
-            clearInterval(switcherInterval);
-            switcherInterval = null;
-            button.textContent = TRANSLATIONS[CURRENT_LANG].autoOn;
-            localStorage.setItem('autoSwitchEnabled', 'false');
-        } else {
-            switcherInterval = setInterval(() => {
-                const currentIndex = PEOPLE_IDS.indexOf(TARGET_PERSON);
-                const nextIndex = (currentIndex + 1) % PEOPLE_IDS.length;
-                setPerson(PEOPLE_IDS[nextIndex]);
-            }, 15000);
-            button.textContent = TRANSLATIONS[CURRENT_LANG].autoOff;
-            localStorage.setItem('autoSwitchEnabled', 'true');
-        }
+      const button = $('#toggle-auto');
+      if (switcherInterval) {
+        clearInterval(switcherInterval); switcherInterval = null;
+        button.textContent = TRANSLATIONS[CURRENT_LANG].autoOn;
+        localStorage.setItem('autoSwitchEnabled', 'false');
+      } else {
+        switcherInterval = setInterval(() => {
+          const currentIndex = PEOPLE_IDS.indexOf(TARGET_PERSON);
+          const nextIndex = (currentIndex + 1) % PEOPLE_IDS.length;
+          setPerson(PEOPLE_IDS[nextIndex]);
+        }, 15000);
+        button.textContent = TRANSLATIONS[CURRENT_LANG].autoOff;
+        localStorage.setItem('autoSwitchEnabled', 'true');
+      }
     }
-
     function populatePersonSelector() {
-        const selector = $('#person-select');
-        selector.innerHTML = '';
-        for (const id of PEOPLE_IDS) {
-            const option = document.createElement('option');
-            option.value = id;
-            option.textContent = id.charAt(0).toUpperCase();
-            selector.appendChild(option);
-        }
-        selector.value = TARGET_PERSON;
+      const selector = $('#person-select');
+      selector.innerHTML = '';
+      for (const id of PEOPLE_IDS) {
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = id.charAt(0).toUpperCase();
+        selector.appendChild(option);
+      }
+      selector.value = TARGET_PERSON;
     }
 
     // ===================== INIT =====================
     window.addEventListener('load', () => {
       applyStoredTheme();
       const storedPerson = localStorage.getItem('targetPerson');
-      if (storedPerson) {
-        TARGET_PERSON = storedPerson;
-      } else {
-        localStorage.setItem('targetPerson', TARGET_PERSON);
-      }
-      
+      if (storedPerson) TARGET_PERSON = storedPerson; else localStorage.setItem('targetPerson', TARGET_PERSON);
+
       const storedLang = localStorage.getItem('dashboardLang');
-      if (storedLang) {
-        CURRENT_LANG = storedLang;
-        $('#lang-select').value = storedLang;
-      } else {
-        localStorage.setItem('dashboardLang', CURRENT_LANG);
-      }
+      if (storedLang) { CURRENT_LANG = storedLang; $('#lang-select').value = storedLang; }
+      else            { localStorage.setItem('dashboardLang', CURRENT_LANG); }
 
       const autoSwitchEnabled = localStorage.getItem('autoSwitchEnabled');
-      if (autoSwitchEnabled === 'true') {
-        toggleSwitcher();
-      }
+      if (autoSwitchEnabled === 'true') toggleSwitcher();
 
       populatePersonSelector();
 
@@ -797,7 +750,9 @@
       $('#toggle-auto').addEventListener('click', toggleSwitcher);
 
       applyTranslations(CURRENT_LANG);
+      fetchFxRates();               // 최초 환율 로드
       setInterval(fetchDashboardData, REFRESH_MS);
+      setInterval(fetchFxRates, REFRESH_MS); // 환율도 주기적 갱신
     });
   </script>
 </body>
