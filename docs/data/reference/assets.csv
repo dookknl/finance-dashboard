@@ -1,7 +1,7 @@
 asset_id,short_name,name,type,market,sector,currency,current_price,price_source,source_symbol
-K55101E11251,우주기술&방산,한국투자 글로벌 우주기술 & 방산 증권 자투자신탁 UH(주식)(C-e),etf,KR,ETF,KRW,3167.26,funddoctor,
-K55207BV6083,로보테크,교보악사로보테크증권자투자신탁 1호(H) [주식] ClassAe,etf,KR,ETF,KRW,1999.11,funddoctor,
-K55301BM7905,전략배분 TDF,미래에셋 전략배분 TDF 2025 혼합자산자투자신탁 종류 A-e,etf,KR,ETF,KRW,1432.18,funddoctor,
+K55101E11251,우주기술&방산,한국투자 글로벌 우주기술 & 방산 증권 자투자신탁 UH(주식)(C-e),etf,KR,ETF,KRW,3018.87,funddoctor,
+K55207BV6083,로보테크,교보악사로보테크증권자투자신탁 1호(H) [주식] ClassAe,etf,KR,ETF,KRW,1982.62,funddoctor,
+K55301BM7905,전략배분 TDF,미래에셋 전략배분 TDF 2025 혼합자산자투자신탁 종류 A-e,etf,KR,ETF,KRW,1427.7,funddoctor,
 CASH_KRW,KRW Cash,현금 (KRW),cash,KR,Cash,KRW,1.0,skip,
 CASH_USD,USD Cash,현금 (USD),cash,US,Cash,USD,1.0,skip,
 CASH_SAR,SAR Cash,현금 (SAR),cash,SA,Cash,SAR,1.0,skip,
